@@ -1,0 +1,15 @@
+@import './variables.scss';
+
+body,
+html {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.element {
+  margin-right: 0px;
+  padding-right: 0px;
+  margin-left: 0px;
+  padding-left: 0px;
+  padding-top: 0px;
+}

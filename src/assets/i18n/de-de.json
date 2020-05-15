@@ -1,0 +1,6 @@
+{
+  "noDataAvailable": "Keine Daten vorhanden",
+  "reference": "Referenz",
+  "noProcessParameterGiven": "No process name given in the URL. Input a ?processParam= in the URL bar then retry",
+  "defects": "Defects"
+}
