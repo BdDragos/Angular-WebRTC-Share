@@ -1,6 +1,6 @@
 <div class="h-100 d-flex">
   <div class="m-auto">
-    <form (ngSubmit)="submit()">
+    <form (ngSubmit)="register()">
       <div class="form-group">
         <label for="username">Username</label>
         <input type="text" name="username" class="form-control" [(ngModel)]="username" />
@@ -9,9 +9,12 @@
         <label for="password">Password</label>
         <input type="password" name="password" class="form-control" [(ngModel)]="password" />
       </div>
+      <div class="form-group">
+        <label for="repeatPassword">Repeat password</label>
+        <input type="password" name="repeatPassword" class="form-control" [(ngModel)]="repeatPassword" />
+      </div>
       <div class="form-group d-flex">
-        <button class="btn btn-primary" type="submit">Login</button>
-        <button class="btn btn-primary ml-auto" type="register">Register</button>
+        <button class="btn btn-primary" type="register">Register</button>
       </div>
     </form>
   </div>

@@ -1,11 +1,11 @@
 import { ModuleWithProviders } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { MainTabComponent } from './../main-screen/main-tab/main-tab.component';
+import { MainRoomScreenComponent } from '../main-screen/main-room-screen/main-room-screen.component';
 
 const routes: Routes = [
   {
     path: '',
-    component: MainTabComponent,
+    component: MainRoomScreenComponent,
   },
 ];
 

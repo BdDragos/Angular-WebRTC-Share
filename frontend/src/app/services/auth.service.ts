@@ -1,21 +1,23 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Injectable } from '@angular/core';
+import { environment } from './../../environments/environment';
 
 @Injectable()
 export class AuthService {
   constructor(private http: HttpClient) {}
 
-  login(username: string, password: string): Observable<boolean> {
-    return this.http
-      .post<{ token: string }>('/api/auth', { username, password })
-      .pipe(
-        map((result) => {
-          localStorage.setItem('access_token', result.token);
-          return true;
-        })
+  login(username: string, password: string) {
+    return new Promise((resolve) => {
+      this.http.post(environment.baseURL + '/api/auth', { username, password }).subscribe(
+        (response: any) => {
+          localStorage.setItem('access_token', response.token);
+          resolve(true);
+        },
+        (error) => {
+          resolve(false);
+        }
       );
+    });
   }
 
   logout() {

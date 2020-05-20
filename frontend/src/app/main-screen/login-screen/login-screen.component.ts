@@ -11,19 +11,22 @@ import { AuthService } from 'src/app/services/auth.service';
 export class LoginScreenComponent implements OnInit {
   public username: string;
   public password: string;
-  public error: string;
 
   constructor(private auth: AuthService, private router: Router) {}
 
   ngOnInit() {}
 
   public submit() {
-    this.auth
-      .login(this.username, this.password)
-      .pipe(first())
-      .subscribe(
-        (result) => this.router.navigate(['todos']),
-        (err) => (this.error = 'Could not authenticate')
-      );
+    this.auth.login(this.username, this.password).then((response) => {
+      if (response) {
+        this.router.navigate(['/main']);
+      } else {
+        console.log('Login failed');
+      }
+    });
+  }
+
+  public register() {
+    this.router.navigate(['/register']);
   }
 }

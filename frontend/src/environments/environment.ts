@@ -5,15 +5,7 @@
 export const environment = {
   production: false,
   defaultLanguage: 'en-us',
-
-  firebase: {
-    apiKey: 'AIzaSyCyzKauqAXLWFOJpXd3Ah8bdx0BDCdicVs',
-    authDomain: 'chat-5aa35.firebaseapp.com',
-    databaseURL: 'https://chat-5aa35.firebaseio.com',
-    projectId: 'chat-5aa35',
-    storageBucket: 'chat-5aa35.appspot.com',
-    messagingSenderId: '328802266059',
-  },
+  baseURL: 'http://localhost:5000',
 };
 
 /*
