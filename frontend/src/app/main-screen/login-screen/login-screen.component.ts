@@ -14,9 +14,11 @@ export class LoginScreenComponent implements OnInit {
 
   constructor(private auth: AuthService, private router: Router) {}
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.auth.logout();
+  }
 
-  public submit() {
+  public login() {
     this.auth.login(this.username, this.password).then((response) => {
       if (response) {
         this.router.navigate(['/main']);

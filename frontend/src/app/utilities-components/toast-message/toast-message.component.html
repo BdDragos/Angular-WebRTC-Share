@@ -1,0 +1,21 @@
+<div #toastBox class="main-toast-div">
+  <div class="toast-text-container">
+    <div *ngIf="type === 'confirmation'" class="toast-icon">
+      <i class="icon-general icon_accept"></i>
+    </div>
+    <div *ngIf="type === 'error'" class="toast-icon">
+      <i class="icon-general icon_error"></i>
+    </div>
+    <div class="toast-text">
+      {{ data.text }}
+    </div>
+  </div>
+
+  <div class="toast-close-div">
+    <div class="toast-close-icon durr-icon durr_icon_cancel" (click)="closeToast()"></div>
+  </div>
+
+  <svg height="54" width="410">
+    <polygon [attr.fill]="color" points="0,0 410,0 410,54 45,54" style="stroke: white; stroke-width: 1;" />
+  </svg>
+</div>

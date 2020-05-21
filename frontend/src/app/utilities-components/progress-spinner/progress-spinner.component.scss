@@ -1,0 +1,82 @@
+.progressSpinner-Interrupt {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+}
+
+.progressSpinner {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+}
+
+.trendBall {
+  background-color: rgba(0, 0, 0, 0);
+  border: 5px solid rgba(25, 111, 163, 0.9);
+  opacity: 0.9;
+  border-top: 5px solid rgba(0, 0, 0, 0);
+  border-left: 5px solid rgba(0, 0, 0, 0);
+  border-radius: 150px;
+  box-shadow: 0 0 35px #2187e7;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  animation: spin 3s infinite linear;
+  -moz-animation: spin 3s infinite linear;
+  -webkit-animation: spin 3s infinite linear;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -75px;
+  margin-left: -75px;
+  z-index: 1007;
+}
+
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg); /* Chrome, Opera 15+, Safari 3.1+ */
+    -ms-transform: rotate(0deg); /* IE 9 */
+    transform: rotate(0deg); /* Firefox 16+, IE 10+, Opera */
+  }
+  100% {
+    -webkit-transform: rotate(360deg); /* Chrome, Opera 15+, Safari 3.1+ */
+    -ms-transform: rotate(360deg); /* IE 9 */
+    transform: rotate(360deg); /* Firefox 16+, IE 10+, Opera */
+  }
+}
+
+@keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg); /* Chrome, Opera 15+, Safari 3.1+ */
+    -ms-transform: rotate(0deg); /* IE 9 */
+    transform: rotate(0deg); /* Firefox 16+, IE 10+, Opera */
+  }
+  100% {
+    -webkit-transform: rotate(360deg); /* Chrome, Opera 15+, Safari 3.1+ */
+    -ms-transform: rotate(360deg); /* IE 9 */
+    transform: rotate(360deg); /* Firefox 16+, IE 10+, Opera */
+  }
+}
+
+.trendBall1 {
+  background-color: rgba(0, 0, 0, 0);
+  border: 5px solid rgba(25, 111, 163, 0.9);
+  opacity: 0.9;
+  border-top: 5px solid rgba(0, 0, 0, 0);
+  border-left: 5px solid rgba(0, 0, 0, 0);
+  border-radius: 150px;
+  box-shadow: 0 0 15px #2187e7;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto;
+  animation: spin 3s infinite linear reverse;
+  -moz-animation: spin 3s infinite linear reverse;
+  -webkit-animation: spin 3s infinite linear reverse;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -65px;
+  margin-left: -65px;
+  z-index: 10008;
+}
