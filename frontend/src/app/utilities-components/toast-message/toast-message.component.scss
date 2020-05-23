@@ -1,0 +1,51 @@
+@import './../../../assets/general.scss';
+@import './../../../assets/variables.scss';
+
+.icon-cancel {
+  background: url('../../../assets/svg/x-icon.svg') no-repeat;
+}
+
+.toast-text-container {
+  position: absolute;
+  padding: 0 12px 0 52px;
+  width: 100%;
+  height: 54px;
+  color: white;
+  display: flex;
+}
+
+.toast-close-div {
+  display: none;
+}
+
+.toast-text {
+  padding-left: 5px;
+  vertical-align: middle;
+  margin: auto;
+  font-size: 18px;
+  line-height: 18px;
+}
+
+.main-toast-div {
+  max-width: 400px;
+  position: fixed;
+  height: 56px;
+  top: 0;
+  right: 0;
+}
+
+.toast-close-icon {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.main-toast-div:hover .toast-close-div {
+  display: block;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}

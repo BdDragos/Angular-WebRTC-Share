@@ -1,3 +1,4 @@
+import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from 'src/app/services/auth.service';
 import { Router } from '@angular/router';
@@ -12,15 +13,16 @@ export class RegisterScreenComponent implements OnInit {
   public password: string;
   public repeatPassword: string;
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, private toastService: ToastService) {}
 
   ngOnInit() {}
 
   public register() {
     if (this.password === this.repeatPassword) {
-      console.log('REGISTER DONE');
+      this.toastService.show({ text: 'The registration was succesfull', type: 'confirmation' });
+      this.router.navigate(['/login']);
     } else {
-      console.log('WRONG PASSWORD INPUT');
+      this.toastService.show({ text: 'The inputed passwords differ from each other', type: 'warning' });
     }
   }
 }

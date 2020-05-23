@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { first } from 'rxjs/operators';
 import { AuthService } from 'src/app/services/auth.service';
+import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
 
 @Component({
   selector: 'app-login-screen',
@@ -12,7 +12,7 @@ export class LoginScreenComponent implements OnInit {
   public username: string;
   public password: string;
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, private toastService: ToastService) {}
 
   ngOnInit() {
     this.auth.logout();
@@ -21,9 +21,10 @@ export class LoginScreenComponent implements OnInit {
   public login() {
     this.auth.login(this.username, this.password).then((response) => {
       if (response) {
+        this.toastService.show({ text: 'The registration was succesfull', type: 'confirmation' });
         this.router.navigate(['/main']);
       } else {
-        console.log('Login failed');
+        this.toastService.show({ text: 'Login failed. Wrong user/pass', type: 'error' });
       }
     });
   }

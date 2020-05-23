@@ -25,7 +25,7 @@ export class ToastService {
 
     const compRef: ComponentRef<ToastComponent> = this.overlayRef.attach(toastPortal);
 
-    this.previousPromise = new Promise(resolve => {
+    this.previousPromise = new Promise((resolve) => {
       this.previousTimeout = setTimeout(() => {
         this.overlayRef.dispose();
         this.overlayRef = null;

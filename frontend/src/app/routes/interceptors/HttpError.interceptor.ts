@@ -1,24 +1,16 @@
-import {
-  HttpErrorResponse,
-  HttpEvent,
-  HttpHandler,
-  HttpInterceptor,
-  HttpRequest,
-} from '@angular/common/http';
+import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
+import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, retry } from 'rxjs/operators';
+import { ProgressSpinnerService } from 'src/app/utilities-components/progress-spinner/progress-spinner.service';
 
 @Injectable()
 export class HttpErrorInterceptor implements HttpInterceptor {
-  constructor() {}
+  constructor(private loadingSpinnerService: ProgressSpinnerService, private toastService: ToastService) {}
 
-  intercept(
-    request: HttpRequest<any>,
-    next: HttpHandler
-  ): Observable<HttpEvent<any>> {
+  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(request).pipe(
-      retry(1),
       catchError((error: HttpErrorResponse) => {
         let errorMessage = '';
         let displayedMessage = '';
@@ -31,7 +23,8 @@ export class HttpErrorInterceptor implements HttpInterceptor {
           errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
           displayedMessage = 'Request to server failed - Code ' + error.status;
         }
-        console.log(errorMessage);
+        this.loadingSpinnerService.closeAll();
+        this.toastService.show({ text: displayedMessage, type: 'error' });
         return throwError(errorMessage);
       })
     );
