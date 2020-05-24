@@ -21,7 +21,7 @@ export class LoginScreenComponent implements OnInit {
   public login() {
     this.auth.login(this.username, this.password).then((response) => {
       if (response) {
-        this.toastService.show({ text: 'The registration was succesfull', type: 'confirmation' });
+        this.toastService.show({ text: 'Login success', type: 'confirmation' });
         this.router.navigate(['/main']);
       } else {
         this.toastService.show({ text: 'Login failed. Wrong user/pass', type: 'error' });

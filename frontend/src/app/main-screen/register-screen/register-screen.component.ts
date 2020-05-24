@@ -19,7 +19,7 @@ export class RegisterScreenComponent implements OnInit {
 
   public register() {
     if (this.password === this.repeatPassword) {
-      this.toastService.show({ text: 'The registration was succesfull', type: 'confirmation' });
+      this.toastService.show({ text: 'Registration done', type: 'confirmation' });
       this.router.navigate(['/login']);
     } else {
       this.toastService.show({ text: 'The inputed passwords differ from each other', type: 'warning' });

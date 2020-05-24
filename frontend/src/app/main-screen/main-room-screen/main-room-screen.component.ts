@@ -3,13 +3,16 @@ import { Component, OnInit } from '@angular/core';
 @Component({
   selector: 'app-main-room-screen',
   templateUrl: './main-room-screen.component.html',
-  styleUrls: ['./main-room-screen.component.scss']
+  styleUrls: ['./main-room-screen.component.scss'],
 })
 export class MainRoomScreenComponent implements OnInit {
+  constructor() {}
 
-  constructor() { }
+  ngOnInit(): void {}
 
-  ngOnInit(): void {
-  }
+  openStartPrivateConvoDialog() {}
 
+  openCreateRoomDialog() {}
+
+  openEnterRoomDialog() {}
 }

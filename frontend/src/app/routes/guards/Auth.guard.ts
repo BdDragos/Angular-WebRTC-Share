@@ -7,7 +7,6 @@ export class AuthGuard implements CanLoad {
 
   canLoad(route: Route) {
     if (localStorage.getItem('access_token')) {
-      console.log('Token found');
       return true;
     } else {
       console.log('No authorization found');
