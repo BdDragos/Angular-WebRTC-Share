@@ -4,6 +4,7 @@ import { HttpClient, HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { AppComponent } from '../global-component/app.component';
 import { LoginScreenComponent } from '../main-screen/login-screen/login-screen.component';
@@ -24,6 +25,7 @@ import { ToastService } from './../utilities-components/toast-message/toast-mess
   imports: [
     AppRouting,
     BrowserModule,
+    BrowserAnimationsModule,
     OverlayModule,
     HttpClientModule,
     CommonModule,

@@ -1,19 +1,19 @@
 import bodyParser from "body-parser";
+import cors from "cors";
 import express, { Application } from "express";
+import expressJwt from "express-jwt";
 import { createServer, Server as HTTPServer } from "http";
 import jwt from "jsonwebtoken";
-import _ from "lodash";
 import path from "path";
-import cors from "cors";
-import expressJwt from "express-jwt";
 
 export class Server {
   private httpServer: HTTPServer;
   private app: Application;
-  // private io: SocketIOServer;
-  private readonly DEFAULT_PORT = 5000;
-
-  USERS = [{ id: 1, username: "abcd" }];
+  private DEFAULT_PORT = 5000;
+  private USERS = [
+    { id: 1, username: "admin" },
+    { id: 2, username: "test" },
+  ];
 
   constructor() {
     this.initialize();
@@ -28,12 +28,8 @@ export class Server {
         path: ["/api/auth", "/"],
       })
     );
-
     this.httpServer = createServer(this.app);
-    // this.io = socketIO(this.httpServer);
-
     this.configureApp();
-
     this.handleLoginRequests();
   }
 
@@ -49,11 +45,11 @@ export class Server {
     this.app.post("/api/auth", (req, res) => {
       const body = req.body;
       const user = this.USERS.find((user) => user.username == body.username);
-      if (!user || body.password != "todo") {
+      if (!user || body.password != "1234") {
         return res.sendStatus(401);
       }
 
-      var token = jwt.sign(
+      const token = jwt.sign(
         { userID: user.id },
         "todo-app-super-shared-secret",
         { expiresIn: "2h" }

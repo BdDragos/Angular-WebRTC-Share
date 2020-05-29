@@ -1,4 +1,9 @@
 /* You can add global styles to this file, and also import other style files */
+@import '../node_modules/@angular/material/prebuilt-themes/deeppurple-amber.css';
+
+* {
+  font-size: 1.3vmax;
+}
 
 .row {
   margin-left: 0px !important;
@@ -8,7 +13,77 @@
 button {
   background-color: #5b6467;
   background-image: linear-gradient(315deg, #5b6467 0%, #8b939a 74%);
-  width: 5vw;
-  height: 4vh;
   color: white;
+  padding: 1%;
+  padding-left: 6%;
+  padding-right: 6%;
+  border: solid thin black;
+}
+
+.user-dialog-style .mat-dialog-container {
+  padding: 8%;
+  background: #808080;
+  color: white;
+  border-radius: 0px !important;
+  box-shadow: 0 0 4px 1px rgba(30, 30, 30, 0.3);
+}
+
+.dialog-head {
+  display: flex;
+}
+
+.dialog-foot {
+  margin-left: auto;
+}
+
+.m-top-1 {
+  margin-top: 1%;
+}
+
+.m-top-2 {
+  margin-top: 2%;
+}
+
+.m-top-3 {
+  margin-top: 3%;
+}
+
+.m-top-4 {
+  margin-top: 4%;
+}
+
+.m-top-5 {
+  margin-top: 5%;
+}
+
+.m-top-6 {
+  margin-top: 6%;
+}
+
+.m-top-7 {
+  margin-top: 7%;
+}
+
+.m-top-8 {
+  margin-top: 8%;
+}
+
+.m-top-9 {
+  margin-top: 9%;
+}
+
+.m-top-10 {
+  margin-top: 10%;
+}
+
+.m-top-11 {
+  margin-top: 11%;
+}
+
+.m-top-12 {
+  margin-top: 12%;
+}
+
+.pointer-cursor {
+  cursor: pointer;
 }

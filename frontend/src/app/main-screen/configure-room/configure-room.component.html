@@ -1,0 +1,18 @@
+<div class="dialog-head">
+  <div class="box-headline">
+    Room configuration
+  </div>
+  <p class="ml-auto pointer-cursor" (click)="close()">&#10006;</p>
+</div>
+
+<div class="dialog-main-container">
+  <div>
+    Room name
+  </div>
+
+  <input class="m-top-1" [(ngModel)]="roomName" />
+</div>
+
+<div class="dialog-foot m-top-7">
+  <button (click)="acceptAction()">Accept</button>
+</div>

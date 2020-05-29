@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { MatDialogConfig, MatDialog } from '@angular/material/dialog';
+import { ConfigureRoomComponent } from '../configure-room/configure-room.component';
 
 @Component({
   selector: 'app-main-room-screen',
@@ -6,13 +8,23 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./main-room-screen.component.scss'],
 })
 export class MainRoomScreenComponent implements OnInit {
-  constructor() {}
+  constructor(public dialog: MatDialog) {}
 
   ngOnInit(): void {}
 
   openStartPrivateConvoDialog() {}
 
-  openCreateRoomDialog() {}
+  openCreateRoomDialog() {
+    const dialogConfig = new MatDialogConfig();
+    dialogConfig.disableClose = true;
+    dialogConfig.autoFocus = true;
+    dialogConfig.panelClass = 'user-dialog-style';
+    const dialogRef = this.dialog.open(ConfigureRoomComponent, dialogConfig);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+      }
+    });
+  }
 
   openEnterRoomDialog() {}
 }

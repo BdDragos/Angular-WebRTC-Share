@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+import { MatDialogRef } from '@angular/material/dialog';
 import { CommunicationService } from 'src/app/services/communication.service';
 
 @Component({
@@ -8,11 +8,19 @@ import { CommunicationService } from 'src/app/services/communication.service';
   styleUrls: ['./configure-room.component.scss'],
 })
 export class ConfigureRoomComponent implements OnInit {
-  public form: FormGroup;
+  public roomName = '';
 
-  constructor(private communicationService: CommunicationService) {}
+  constructor(private communicationService: CommunicationService, private dialogRef: MatDialogRef<ConfigureRoomComponent>) {}
 
   ngOnInit() {}
+
+  close() {
+    this.dialogRef.close();
+  }
+
+  acceptAction() {
+    this.dialogRef.close(this.roomName);
+  }
 
   createRoom() {
     this.communicationService.createNewRoom(null);
