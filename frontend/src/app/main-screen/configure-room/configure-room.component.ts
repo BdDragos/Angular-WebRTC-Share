@@ -21,8 +21,4 @@ export class ConfigureRoomComponent implements OnInit {
   acceptAction() {
     this.dialogRef.close(this.roomName);
   }
-
-  createRoom() {
-    this.communicationService.createNewRoom(null);
-  }
 }
