@@ -26,6 +26,7 @@
     "@angular/router": "~9.1.9",
     "@ngx-translate/core": "^12.1.2",
     "@ngx-translate/http-loader": "^4.0.0",
+    "@types/socket.io-client": "^1.4.33",
     "bootstrap": "^4.5.0",
     "file-saver": "^2.0.2",
     "moment": "^2.26.0",

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
-import { CommunicationService } from 'src/app/services/communication.service';
+import { RoomAPIService } from './../../services/roomAPI.service';
 
 @Component({
   selector: 'app-configure-room',
@@ -10,7 +10,7 @@ import { CommunicationService } from 'src/app/services/communication.service';
 export class ConfigureRoomComponent implements OnInit {
   public roomName = '';
 
-  constructor(private communicationService: CommunicationService, private dialogRef: MatDialogRef<ConfigureRoomComponent>) {}
+  constructor(private roomAPIService: RoomAPIService, private dialogRef: MatDialogRef<ConfigureRoomComponent>) {}
 
   ngOnInit() {}
 
@@ -19,6 +19,7 @@ export class ConfigureRoomComponent implements OnInit {
   }
 
   acceptAction() {
-    this.dialogRef.close(this.roomName);
+    this.roomAPIService.addRoom(this.roomName);
+    this.dialogRef.close();
   }
 }

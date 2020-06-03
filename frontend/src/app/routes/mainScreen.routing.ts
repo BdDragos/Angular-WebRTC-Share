@@ -1,7 +1,7 @@
+import { RoomComponent } from './../room-screen/room/room.component';
 import { ModuleWithProviders } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { MainRoomScreenComponent } from '../main-screen/main-room-screen/main-room-screen.component';
-import { ConfigureRoomComponent } from '../main-screen/configure-room/configure-room.component';
 
 const routes: Routes = [
   {
@@ -9,8 +9,8 @@ const routes: Routes = [
     component: MainRoomScreenComponent,
   },
   {
-    path: 'create-room',
-    component: ConfigureRoomComponent,
+    path: 'privateRoom',
+    component: RoomComponent,
   },
 ];
 

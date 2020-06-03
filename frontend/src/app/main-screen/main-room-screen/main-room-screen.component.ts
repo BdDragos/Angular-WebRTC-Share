@@ -1,5 +1,7 @@
+import { RoomListComponent } from './../room-list/room-list.component';
 import { Component, OnInit } from '@angular/core';
-import { MatDialogConfig, MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { ConfigureRoomComponent } from '../configure-room/configure-room.component';
 
 @Component({
@@ -8,7 +10,7 @@ import { ConfigureRoomComponent } from '../configure-room/configure-room.compone
   styleUrls: ['./main-room-screen.component.scss'],
 })
 export class MainRoomScreenComponent implements OnInit {
-  constructor(public dialog: MatDialog) {}
+  constructor(public dialog: MatDialog, private router: Router) {}
 
   ngOnInit(): void {}
 
@@ -26,5 +28,15 @@ export class MainRoomScreenComponent implements OnInit {
     });
   }
 
-  openEnterRoomDialog() {}
+  openEnterRoomDialog() {
+    const dialogConfig = new MatDialogConfig();
+    dialogConfig.disableClose = true;
+    dialogConfig.autoFocus = true;
+    dialogConfig.panelClass = 'user-dialog-style';
+    const dialogRef = this.dialog.open(RoomListComponent, dialogConfig);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+      }
+    });
+  }
 }

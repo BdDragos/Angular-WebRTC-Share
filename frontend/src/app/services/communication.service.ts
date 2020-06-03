@@ -1,135 +1,153 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
-import io from 'socket.io-client';
-import { Room } from 'src/models/room';
-import { ProgressSpinnerService } from './../utilities-components/progress-spinner/progress-spinner.service';
+import { Observable } from 'rxjs';
+import * as io from 'socket.io-client';
 
 @Injectable()
 export class CommunicationService {
-  private roomListSubject = new Subject<Room[]>();
-  private socket: any = null;
+  private url = 'http://localhost:5000';
+  private socket;
+  private connected = false;
+  public connectedusers: any;
 
-  constructor(private http: HttpClient, private loadingSpinnerService: ProgressSpinnerService) {
-    this.initializeSocket();
+  constructor() {
+    this.socket = io(this.url);
   }
 
-  getRoomListSubject() {
-    return this.roomListSubject.asObservable();
+  SetUserName(username) {
+    this.socket.emit('add user', username);
+    return Observable.create((observer) => {
+      this.socket.on('logged-user', (data) => {
+        this.connected = true;
+        observer.next(data);
+      });
+    });
+  }
+  public RemoveUser() {
+    this.socket.emit('disconnect');
   }
 
-  public initializeSocket() {
-    this.socket = io('http://localhost:3000', {
-      reconnectionDelay: 1000,
-      reconnection: true,
-      reconnectionAttempts: 1,
-      transports: ['websocket'], // default is ['polling', 'websocket']
-      rejectUnauthorized: false,
-    });
+  public BroadCastMessage(message) {
+    this.socket.emit('new-broadcast-message', message);
+  }
 
-    this.socket.on('connect', () => {
-      console.log('Connected to Server');
-    });
-    this.socket.on('connect_timeout', (timeout: any) => {
-      console.log('Connection Timeout with : ', timeout);
-    });
-    this.socket.on('connect_error', (error: any) => {
-      console.log('Connection Error : ', error);
-    });
-    this.socket.on('disconnect', (reason: any) => {
-      if (reason === 'io server disconnect') {
-        // the disconnection was initiated by the server, you need to reconnect manually by socket.connect()
-        console.log('The disconnection was initiated by the server, server disconnected');
-      } else {
-        // else the socket will automatically try to reconnect
-        console.log('Server Disconnected : ', reason);
-      }
-    });
-    this.socket.on('reconnect', (attemptNumber: any) => {
-      console.log('Socket Server Successfully Reconnected with attempt : ', attemptNumber);
-    });
-    this.socket.on('reconnect_attempt', (attemptNumber: any) => {
-      console.log('Reconnect Attempt : ', attemptNumber);
-    });
-    this.socket.on('reconnecting', (attemptNumber: any) => {
-      console.log('Attempting to Reconnect : ', attemptNumber);
-    });
-    this.socket.on('reconnect_error', (error: any) => {
-      console.log('Reconnection Error : ', error);
-    });
-    this.socket.on('reconnect_failed', () => {
-      console.log('Reconnection Failed');
-    });
-    this.socket.on('ping', () => {
-      console.log('ping packet is written out to the server');
-    });
-    this.socket.on('pong', (latency: any) => {
-      console.log('pong is received from the server in : ', latency);
+  public SendMessage(message, from, to) {
+    //this.socket.emit('new-message', message);
+    this.socket.emit('new-message', {
+      toid: to,
+      message: message,
+      fromname: from,
     });
   }
 
-  public getSocketId = () => {
-    return Observable.create((observer: any) => {
-      this.socket.on('socketid', (message: any) => {
+  public GetMessages() {
+    return Observable.create((observer) => {
+      this.socket.on('new-message', (message) => {
         observer.next(message);
       });
     });
-  };
-
-  public getClients = () => {
-    this.socket.emit('clients');
-    return Observable.create((observer: any) => {
-      this.socket.on('clients', (clients: any) => {
-        observer.next(clients);
+  }
+  public GetConnectedUsers() {
+    return Observable.create((observer) => {
+      this.socket.on('client-list', (data) => {
+        observer.next(data);
       });
     });
-  };
+  }
+  /***
+   * Section Video call
+   * following requests are used for video call
+   */
 
-  public sendOffer = (offer: any) => {
-    this.socket.emit('offer', offer);
-  };
-
-  public receiveOffer = () => {
-    return Observable.create((observer: any) => {
-      this.socket.on('offer', (offer: any) => {
-        observer.next(offer);
+  public VideoCallRequest(from, to) {
+    this.socket.emit('video-call', {
+      fromname: from,
+      toid: to,
+    });
+  }
+  public OnVideoCallRequest() {
+    return Observable.create((observer) => {
+      this.socket.on('video-call', (data) => {
+        observer.next(data);
       });
     });
-  };
-
-  public sendAnswer = (answer: any) => {
-    this.socket.emit('answer', answer);
-  };
-
-  public receiveAnswer = () => {
-    return Observable.create((observer: any) => {
-      this.socket.on('answer', (answer: any) => {
-        observer.next(answer);
+  }
+  public VideoCallAccepted(from, to) {
+    this.socket.emit('video-call-accept', {
+      fromname: from,
+      toid: to,
+    });
+  }
+  public OnVideoCallAccepted() {
+    return Observable.create((observer) => {
+      this.socket.on('video-call-accept', (data) => {
+        observer.next(data);
       });
     });
-  };
-
-  public sendIceCandidate = (candidate: any) => {
-    this.socket.emit('icecandidate', candidate);
-  };
-
-  public receiveIceCandidate = () => {
-    return Observable.create((observer: any) => {
-      this.socket.on('icecandidate', (candidate: any) => {
-        observer.next(candidate);
+  }
+  public BusyNow() {
+    this.socket.emit('busy-user');
+  }
+  public GetBusyUsers() {
+    this.socket.emit('get-busy-user');
+    return Observable.create((observer) => {
+      this.socket.on('get-busy-user', (data) => {
+        observer.next(data);
       });
     });
-  };
-
-  public sendFile = (file: any) => {
-    this.socket.emit('file', file);
-  };
-
-  public receiveFile = () => {
-    return Observable.create((observer: any) => {
-      this.socket.on('file', (file: any) => {
-        observer.next(file);
+  }
+  public EndVideoCall(from, to, toname) {
+    this.socket.emit('end-video-call', {
+      fromname: from,
+      toid: to,
+      toname: toname,
+    });
+  }
+  public OnVideoCallEnded() {
+    this.socket.emit('get-busy-user');
+    return Observable.create((observer) => {
+      this.socket.on('video-call-ended', (data) => {
+        observer.next(data);
       });
     });
-  };
+  }
+  public VideoCallRejected(from, to) {
+    this.socket.emit('video-call-reject', {
+      fromname: from,
+      toid: to,
+    });
+  }
+  public OnVideoCallRejected() {
+    return Observable.create((observer) => {
+      this.socket.on('video-call-reject', (data) => {
+        observer.next(data);
+      });
+    });
+  }
+  /**
+   *
+   * @param candidate or @param description for video call
+   * need to send remote user id
+   */
+  public SendCallRequest(val, type, uid) {
+    let data;
+    if (type === 'desc') {
+      data = {
+        toid: uid,
+        desc: val,
+      };
+    } else {
+      data = {
+        toid: uid,
+        candidate: val,
+      };
+    }
+    this.socket.emit('call-request', data);
+  }
+  public ReceiveCallRequest() {
+    return Observable.create((observer) => {
+      this.socket.on('call-request', (data) => {
+        observer.next(data);
+      });
+    });
+  }
 }

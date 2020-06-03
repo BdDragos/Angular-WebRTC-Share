@@ -1,0 +1,15 @@
+<div class="dialog-head">
+  <div class="box-headline">
+    Select A Room
+  </div>
+  <p class="m-l-5 pointer-cursor" (click)="close()">&#10006;</p>
+</div>
+
+<div class="dialog-main-container">
+  <div class="d-flex" *ngFor="let element of roomList">
+    <div (click)="selectedARoom(element)" class="pointer-cursor m-top-1">{{ element.name }}</div>
+    <p (click)="deleteRoom(element)" class="m-l-5" *ngIf="element.owner === currentUser">&#10006;</p>
+  </div>
+</div>
+
+<div class="dialog-foot m-top-7"></div>
