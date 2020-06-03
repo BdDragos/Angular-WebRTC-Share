@@ -7,7 +7,6 @@ import { CommunicationService } from 'src/app/services/communication.service';
 import { MainTabComponent } from '../main-screen/main-tab/main-tab.component';
 import { RoomListComponent } from '../main-screen/room-list/room-list.component';
 import { RoomComponent } from '../room-screen/room/room.component';
-import { VideoCallComponentComponent } from '../room-screen/video-call-component/video-call-component.component';
 import { HttpErrorInterceptor } from '../routes/interceptors/HttpError.interceptor';
 import { MainScreenRouting } from '../routes/mainScreen.routing';
 import { RoomAPIService } from '../services/roomAPI.service';
@@ -23,8 +22,7 @@ import { UserConfigComponent } from './../main-screen/user-config/user-config.co
     MainRoomScreenComponent,
     ConfigureRoomComponent,
     RoomComponent,
-    VideoCallComponentComponent,
-    RoomListComponent
+    RoomListComponent,
   ],
   providers: [CommunicationService, RoomAPIService, { provide: HTTP_INTERCEPTORS, useClass: HttpErrorInterceptor, multi: true }],
 })

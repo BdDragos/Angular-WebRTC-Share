@@ -5,149 +5,98 @@ import * as io from 'socket.io-client';
 @Injectable()
 export class CommunicationService {
   private url = 'http://localhost:5000';
-  private socket;
-  private connected = false;
+  private socket: SocketIOClient.Socket;
   public connectedusers: any;
 
-  constructor() {
-    this.socket = io(this.url);
+  constructor() {}
+
+  public onInit(username, roomname) {
+    this.socket = io(this.url, { transports: ['websocket'], upgrade: false });
+
+    console.log('INITALIZED');
+
+    this.socket.on('connect', () => {
+      console.log('Connected to Server');
+    });
+
+    this.socket.on('connect_timeout', (timeout: any) => {
+      console.log('Connection Timeout with : ', timeout);
+    });
+
+    this.socket.on('connect_error', (error: any) => {
+      console.log('Connection Error : ', error);
+    });
+
+    this.socket.on('disconnect', (reason: any) => {
+      if (reason === 'io server disconnect') {
+        // the disconnection was initiated by the server, you need to reconnect manually by socket.connect()
+        console.log('The disconnection was initiated by the server, server disconnected');
+      } else {
+        // else the socket will automatically try to reconnect
+        console.log('Server Disconnected : ', reason);
+      }
+    });
+
+    this.socket.emit('add-user', username, roomname);
   }
 
-  SetUserName(username) {
-    this.socket.emit('add user', username);
-    return Observable.create((observer) => {
-      this.socket.on('logged-user', (data) => {
-        this.connected = true;
-        observer.next(data);
-      });
-    });
-  }
-  public RemoveUser() {
+  public disconnect() {
     this.socket.emit('disconnect');
+    this.socket.disconnect();
+    this.socket = null;
   }
 
-  public BroadCastMessage(message) {
-    this.socket.emit('new-broadcast-message', message);
-  }
-
-  public SendMessage(message, from, to) {
-    //this.socket.emit('new-message', message);
-    this.socket.emit('new-message', {
-      toid: to,
-      message: message,
-      fromname: from,
-    });
-  }
-
-  public GetMessages() {
-    return Observable.create((observer) => {
-      this.socket.on('new-message', (message) => {
+  public getSocketId = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('currentSocket', (message: any) => {
         observer.next(message);
+        this.socket.emit('clients');
       });
     });
-  }
-  public GetConnectedUsers() {
-    return Observable.create((observer) => {
-      this.socket.on('client-list', (data) => {
-        observer.next(data);
-      });
-    });
-  }
-  /***
-   * Section Video call
-   * following requests are used for video call
-   */
+  };
 
-  public VideoCallRequest(from, to) {
-    this.socket.emit('video-call', {
-      fromname: from,
-      toid: to,
-    });
-  }
-  public OnVideoCallRequest() {
-    return Observable.create((observer) => {
-      this.socket.on('video-call', (data) => {
-        observer.next(data);
+  public getClients = () => {
+    this.socket.emit('clients');
+    return Observable.create((observer: any) => {
+      this.socket.on('clients', (clients: any) => {
+        observer.next(clients);
       });
     });
-  }
-  public VideoCallAccepted(from, to) {
-    this.socket.emit('video-call-accept', {
-      fromname: from,
-      toid: to,
-    });
-  }
-  public OnVideoCallAccepted() {
-    return Observable.create((observer) => {
-      this.socket.on('video-call-accept', (data) => {
-        observer.next(data);
+  };
+
+  public sendOffer = (offer: any) => {
+    this.socket.emit('offer', offer);
+  };
+
+  public receiveOffer = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('offer', (offer: any) => {
+        observer.next(offer);
       });
     });
-  }
-  public BusyNow() {
-    this.socket.emit('busy-user');
-  }
-  public GetBusyUsers() {
-    this.socket.emit('get-busy-user');
-    return Observable.create((observer) => {
-      this.socket.on('get-busy-user', (data) => {
-        observer.next(data);
+  };
+
+  public sendAnswer = (answer: any) => {
+    this.socket.emit('answer', answer);
+  };
+
+  public receiveAnswer = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('answer', (answer: any) => {
+        observer.next(answer);
       });
     });
-  }
-  public EndVideoCall(from, to, toname) {
-    this.socket.emit('end-video-call', {
-      fromname: from,
-      toid: to,
-      toname: toname,
-    });
-  }
-  public OnVideoCallEnded() {
-    this.socket.emit('get-busy-user');
-    return Observable.create((observer) => {
-      this.socket.on('video-call-ended', (data) => {
-        observer.next(data);
+  };
+
+  public sendIceCandidate = (candidate: any) => {
+    this.socket.emit('icecandidate', candidate);
+  };
+
+  public receiveIceCandidate = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('icecandidate', (candidate: any) => {
+        observer.next(candidate);
       });
     });
-  }
-  public VideoCallRejected(from, to) {
-    this.socket.emit('video-call-reject', {
-      fromname: from,
-      toid: to,
-    });
-  }
-  public OnVideoCallRejected() {
-    return Observable.create((observer) => {
-      this.socket.on('video-call-reject', (data) => {
-        observer.next(data);
-      });
-    });
-  }
-  /**
-   *
-   * @param candidate or @param description for video call
-   * need to send remote user id
-   */
-  public SendCallRequest(val, type, uid) {
-    let data;
-    if (type === 'desc') {
-      data = {
-        toid: uid,
-        desc: val,
-      };
-    } else {
-      data = {
-        toid: uid,
-        candidate: val,
-      };
-    }
-    this.socket.emit('call-request', data);
-  }
-  public ReceiveCallRequest() {
-    return Observable.create((observer) => {
-      this.socket.on('call-request', (data) => {
-        observer.next(data);
-      });
-    });
-  }
+  };
 }

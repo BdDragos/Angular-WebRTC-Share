@@ -9,7 +9,7 @@ const routes: Routes = [
     component: MainRoomScreenComponent,
   },
   {
-    path: 'privateRoom',
+    path: 'privateRoom/:roomname',
     component: RoomComponent,
   },
 ];

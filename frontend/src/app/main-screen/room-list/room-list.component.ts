@@ -45,7 +45,7 @@ export class RoomListComponent implements OnInit, OnDestroy {
   }
 
   selectedARoom(room: Room) {
-    this.router.navigate(['main/privateRoom']);
+    this.router.navigate(['main/privateRoom', room.name]);
     this.dialogRef.close();
   }
 }

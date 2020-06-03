@@ -15,12 +15,9 @@ export class Server {
   private app: Application;
   private io: SocketIO.Server;
 
-  private clients = [];
-  private busyUsers = [];
-  private numUsers = 0;
+  private clients = {};
 
   private rooms: { owner: string; name: string; socket: any }[] = [];
-  private userIds = {};
 
   private USERS = [
     { id: 1, username: 'admin' },
@@ -123,7 +120,7 @@ export class Server {
       } else {
         this.rooms.push({ owner: body.username, name: body.room, socket: [] });
 
-        this.userIds[body.room] = 0;
+        this.clients[body.room] = [];
 
         console.log('Room created, with #', body.room);
 
@@ -139,7 +136,7 @@ export class Server {
       if (this.rooms[foundRoom] && this.rooms[foundRoom].owner === body.username) {
         this.rooms.splice(foundRoom, 1);
 
-        delete this.userIds[body.room];
+        delete this.clients[body.room];
 
         console.log('Room deleted, with #', body.room);
 
@@ -156,130 +153,71 @@ export class Server {
 
   listenSocket() {
     this.io.on('connection', (socket) => {
-      var addedUser = false;
-      console.log('user connected');
+      socket.on('add-user', (username, roomname) => {
+        if (socket) {
+          socket.join(roomname);
 
-      socket.on('new-message', (data) => {
-        socket.broadcast.to(data.toid).emit('new-message', data);
+          if (!this.clients) {
+            this.clients = {};
+          }
+
+          if (!this.clients[roomname]) {
+            this.clients[roomname] = [];
+          }
+
+          const newClient = {
+            socketId: socket.id,
+            clientId: username
+          };
+
+          this.clients[roomname].push(newClient);
+
+          // we store the username in the socket session for this client
+          socket['username'] = username;
+          socket['roomname'] = roomname;
+
+          console.log(username + ' - client connected');
+
+          socket.emit('currentSocket', newClient);
+        }
       });
 
-      socket.on('add user', (username) => {
-        if (addedUser) return;
-        this.clients.push({
-          id: socket.id,
-          username: username,
-          busy: false
-        });
-        // we store the username in the socket session for this client
-        socket['username'] = username;
-        ++this.numUsers;
-        addedUser = true;
-        socket.emit('login-user-count', {
-          numUsers: this.numUsers
-        });
-        socket.emit('logged-user', {
-          username: socket['username'],
-          numUsers: this.numUsers
-        });
-        // echo globally (all clients) that a person has connected
-        socket.broadcast.emit('user joined', {
-          username: socket['username'],
-          numUsers: this.numUsers
-        });
-
-        setInterval(() => {
-          socket.broadcast.emit('client-list', this.clients);
-        }, 3000);
+      socket.on('clients', () => {
+        this.io.sockets.in(socket['roomname']).emit('clients', this.clients[socket['roomname']]);
       });
 
-      // when the client emits 'typing', we broadcast it to others
-      socket.on('typing', () => {
-        socket.broadcast.emit('typing', {
-          username: socket['username']
-        });
-      });
-
-      // when the client emits 'stop typing', we broadcast it to others
-      socket.on('stop typing', () => {
-        socket.broadcast.emit('stop typing', {
-          username: socket['username']
+      socket.on('offer', (offer) => {
+        this.clients[socket['roomname']].forEach((client) => {
+          if (offer['to'] == client['clientId']) {
+            socket.broadcast.to(client['socketId']).emit('offer', offer);
+          }
         });
       });
 
-      // when the user disconnects.. perform this
+      socket.on('answer', (answer) => {
+        this.clients[socket['roomname']].forEach((client) => {
+          if (answer['to'] == client['clientId']) {
+            socket.broadcast.to(client['socketId']).emit('answer', answer);
+          }
+        });
+      });
+
+      socket.on('icecandidate', (candidate) => {
+        this.clients[socket['roomname']].forEach((client) => {
+          if (candidate['to'] == client['clientId']) {
+            socket.broadcast.to(client['socketId']).emit('icecandidate', candidate);
+          }
+        });
+      });
+
       socket.on('disconnect', () => {
-        if (addedUser) {
-          --this.numUsers;
-          if (this.clients.length > 0) {
-            var i = 0;
-            this.clients.forEach((a) => {
-              if (a.username == socket['username']) {
-                this.clients.splice(i, 1);
-              }
-              i++;
-            });
+        this.clients[socket['roomname']].forEach((client) => {
+          if (client['socketId'] == socket.id) {
+            var socketIndex = this.clients[socket['roomname']].indexOf(client);
+            this.clients[socket['roomname']].splice(socketIndex, 1);
+            console.log(socket.id + ' - client disconnected');
+            this.io.emit('clients', this.clients[socket['roomname']]);
           }
-          // var index = clients.indexOf(socket.username);
-          // if (index !== -1) {
-          //     clients.splice(index, 1);
-          // }
-
-          if (this.busyUsers.length > 0) {
-            var i = 0;
-            this.busyUsers.forEach((a) => {
-              if (a.username == socket['username']) {
-                this.busyUsers.splice(i, 1);
-              }
-              i++;
-            });
-          }
-          // echo globally that this client has left
-          socket.broadcast.emit('user-left', socket['username']);
-        }
-      });
-
-      /***
-       * Section Video call
-       * following requests are used for video call
-       */
-      socket.on('video-call', (data) => {
-        socket.broadcast.to(data.toid).emit('video-call', data);
-      });
-      socket.on('video-call-accept', (data) => {
-        socket.broadcast.to(data.toid).emit('video-call-accept', data);
-      });
-      socket.on('video-call-reject', (data) => {
-        socket.broadcast.to(data.toid).emit('video-call-reject', data);
-      });
-      socket.on('get-busy-user', () => {
-        socket.broadcast.emit('get-busy-user', this.busyUsers);
-      });
-      socket.on('busy-user', () => {
-        this.busyUsers.push({
-          id: socket.id,
-          username: socket['username']
-        });
-        socket.broadcast.emit('get-busy-user', this.busyUsers);
-      });
-      socket.on('end-video-call', (data) => {
-        if (this.busyUsers.length > 0) {
-          var usr1 = this.busyUsers.find((a) => a.username == socket['username']);
-          var index1 = this.busyUsers.indexOf(usr1);
-          this.busyUsers.splice(index1, 1);
-
-          var usr2 = this.busyUsers.find((a) => a.username == data.toname);
-          var index2 = this.busyUsers.indexOf(usr2);
-          this.busyUsers.splice(index2, 1);
-        }
-        socket.broadcast.to(data.toid).emit('video-call-ended', data);
-        socket.broadcast.emit('get-busy-user', this.busyUsers);
-      });
-      // when the caller emits 'call-request', this listens and executes
-      socket.on('call-request', (data) => {
-        // we tell the client to execute 'call-request'
-        socket.broadcast.to(data.toid).emit('call-request', {
-          username: socket['username'],
-          data: data
         });
       });
     });
