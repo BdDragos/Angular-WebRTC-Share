@@ -13,8 +13,6 @@ export class CommunicationService {
   public onInit(username, roomname) {
     this.socket = io(this.url, { transports: ['websocket'], upgrade: false });
 
-    console.log('INITALIZED');
-
     this.socket.on('connect', () => {
       console.log('Connected to Server');
     });

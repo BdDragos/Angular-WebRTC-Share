@@ -165,6 +165,12 @@ export class Server {
             this.clients[roomname] = [];
           }
 
+          if (this.clients[username]) {
+            socket.disconnect();
+            socket.leaveAll();
+            return;
+          }
+
           const newClient = {
             socketId: socket.id,
             clientId: username
@@ -183,42 +189,63 @@ export class Server {
       });
 
       socket.on('clients', () => {
-        this.io.sockets.in(socket['roomname']).emit('clients', this.clients[socket['roomname']]);
+        this.io.sockets.in(socket['roomname']).emit('clients', {
+          clients: this.clients[socket['roomname']],
+          socketIds: this.clients[socket['roomname']].map((e) => e.socketId)
+        });
       });
 
       socket.on('offer', (offer) => {
-        this.clients[socket['roomname']].forEach((client) => {
-          if (offer['to'] == client['clientId']) {
-            socket.broadcast.to(client['socketId']).emit('offer', offer);
-          }
-        });
+        console.log('Offer arrived: ' + offer['to']);
+
+        if (this.clients[socket['roomname']]) {
+          this.clients[socket['roomname']].forEach((client) => {
+            if (offer['to'] === client['socketId']) {
+              socket.broadcast.to(client['socketId']).emit('offer', { offer: offer });
+            }
+          });
+        }
       });
 
       socket.on('answer', (answer) => {
-        this.clients[socket['roomname']].forEach((client) => {
-          if (answer['to'] == client['clientId']) {
-            socket.broadcast.to(client['socketId']).emit('answer', answer);
-          }
-        });
+        console.log('Answer arrived: ' + answer['to']);
+
+        if (this.clients[socket['roomname']]) {
+          this.clients[socket['roomname']].forEach((client) => {
+            if (answer['to'] === client['socketId']) {
+              socket.broadcast.to(client['socketId']).emit('answer', { answer: answer });
+            }
+          });
+        }
       });
 
       socket.on('icecandidate', (candidate) => {
-        this.clients[socket['roomname']].forEach((client) => {
-          if (candidate['to'] == client['clientId']) {
-            socket.broadcast.to(client['socketId']).emit('icecandidate', candidate);
-          }
-        });
+        console.log('Icecandidate arrived: ' + candidate['to']);
+
+        if (this.clients[socket['roomname']]) {
+          this.clients[socket['roomname']].forEach((client) => {
+            if (candidate['to'] === client['socketId']) {
+              socket.broadcast.to(client['socketId']).emit('icecandidate', { candidate: candidate });
+            }
+          });
+        }
       });
 
       socket.on('disconnect', () => {
-        this.clients[socket['roomname']].forEach((client) => {
-          if (client['socketId'] == socket.id) {
-            var socketIndex = this.clients[socket['roomname']].indexOf(client);
-            this.clients[socket['roomname']].splice(socketIndex, 1);
-            console.log(socket.id + ' - client disconnected');
-            this.io.emit('clients', this.clients[socket['roomname']]);
-          }
-        });
+        if (this.clients[socket['roomname']]) {
+          this.clients[socket['roomname']].forEach((client) => {
+            if (client['socketId'] == socket.id) {
+              var socketIndex = this.clients[socket['roomname']].indexOf(client);
+              this.clients[socket['roomname']].splice(socketIndex, 1);
+              console.log(socket.id + ' - client disconnected');
+
+              this.io.sockets.in(socket['roomname']).emit('clients', {
+                clients: this.clients[socket['roomname']],
+                socketIds: this.clients[socket['roomname']].map((e) => e.socketId)
+              });
+            }
+          });
+        }
       });
     });
   }

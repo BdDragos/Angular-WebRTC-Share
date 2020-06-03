@@ -1,7 +1,9 @@
+import { ConnectedClients } from 'src/models/connectedClients.mode';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Component, ElementRef, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { CommunicationService } from 'src/app/services/communication.service';
+import { Client } from 'src/models/client.model';
 
 @Component({
   selector: 'app-room',
@@ -10,22 +12,18 @@ import { CommunicationService } from 'src/app/services/communication.service';
 })
 export class RoomComponent implements OnInit, OnDestroy {
   public browser = navigator as any;
-  public title = 'Angular WebRTC Project';
-  public introline = '(Web Real-Time Communication using Socket.IO)';
   public subscriptionArray: Subscription[] = [];
   public serverStatus: boolean;
   public clientId: any = '';
   public socketId: any = '';
-  public clients: any = [];
+  public clients: Client[] = [];
   public textEnable = true;
   public videoEnable = false;
   public screenEnable = false;
-  public connected = false;
   public fromClientId: any;
-  public toClientId: any;
-  public peerConnection: any;
-  public dataChannel: any;
-  public offer: any;
+  public toClientId: string[] = [];
+  public peerConnection: any[] = [];
+  public dataChannel: any[] = [];
   public message: any;
   public messages: string[] = [];
   public audio: any;
@@ -42,6 +40,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   public screenWidth = 400;
   public screenHeight = 300;
 
+  private toConnect: string[] = [];
   private loggedUserName = '';
 
   @ViewChild('audioElement', { static: false }) audioElement: ElementRef;
@@ -51,7 +50,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild('screenElement', { static: false }) screenElement: ElementRef;
   @ViewChild('remoteScreenElement', { static: false }) remoteScreenElement: ElementRef;
 
-  constructor(public socketservice: CommunicationService, private router: Router, private route: ActivatedRoute) {
+  constructor(public communicationService: CommunicationService, private router: Router, private route: ActivatedRoute) {
     this.loggedUserName = localStorage.getItem('username');
     if (!this.loggedUserName) {
       this.router.navigate(['/main']);
@@ -60,17 +59,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscriptionArray.forEach((e) => e.unsubscribe());
-    this.socketservice.disconnect();
+    this.communicationService.disconnect();
   }
 
   ngOnInit(): void {
     this.subscriptionArray.push(
       this.route.params.subscribe((params) => {
-        if (this.socketservice) {
-          this.socketservice.onInit(this.loggedUserName, params.roomname);
+        if (this.communicationService) {
+          this.communicationService.onInit(this.loggedUserName, params.roomname);
 
           this.subscriptionArray.push(
-            this.socketservice.getSocketId().subscribe((message: any) => {
+            this.communicationService.getSocketId().subscribe((message: any) => {
               this.serverStatus = true;
               this.clientId = message.clientId;
               this.fromClientId = message.clientId;
@@ -78,114 +77,75 @@ export class RoomComponent implements OnInit, OnDestroy {
             })
           );
 
-          this.socketservice.getClients().subscribe((clients: any) => {
-            this.clients = clients;
+          this.communicationService.getClients().subscribe((response: { clients: Client[]; socketIds: string[] }) => {
+            this.toConnect = [];
+
+            response.socketIds.forEach((e) => {
+              if (this.toClientId.findIndex((f) => f === e) < 0) {
+                this.toClientId.push(e);
+                this.toConnect.push(e);
+              }
+            });
+
+            const indexCurrent = response.clients.findIndex((e) => e.clientId === this.clientId);
+
+            response.clients.splice(indexCurrent, 1);
+            this.clients = response.clients;
+
+            this.toConnect.forEach((e) => {
+              this.peerConnection[e] = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.services.mozilla.com' }, { urls: 'stun:stun.l.google.com:19302' }],
+              });
+
+              this.configurePeerConnection(this.peerConnection[e], e);
+            });
+
+            if (this.toClientId.findIndex((e) => e === this.socketId) === this.toClientId.length - 1) {
+              this.connect(this.toConnect);
+            }
           });
 
           window.RTCPeerConnection = this.getRTCPeerConnection();
           window.RTCSessionDescription = this.getRTCSessionDescription();
           window.RTCIceCandidate = this.getRTCIceCandidate();
+
           this.browser.getUserMedia = this.getAllUserMedia();
-          this.peerConnection = new RTCPeerConnection({
-            iceServers: [
-              {
-                urls: ['stun:bturn1.xirsys1221.com'],
-              },
-              {
-                username: '9hiaOVYRRn31s_Lv2sGS-iGgtEKg5_3SVWfeEZyO-4GWtKxUv0sCxQVNGkxlk-zBAAAAAF0sGiFhamF5cGF0aWw=',
-                credential: '04f626c0-a6c8-11e9-8ad1-26d3ed601a80',
-                urls: [
-                  'turn:bturn1.xirsys.com:80?transport=udp',
-                  'turn:bturn1.xirsys.com:3478?transport=udp',
-                  'turn:bturn1.xirsys.com:80?transport=tcp',
-                  'turn:bturn1.xirsys.com:3478?transport=tcp',
-                  'turns:bturn1.xirsys.com:443?transport=tcp',
-                  'turns:bturn1.xirsys.com:5349?transport=tcp',
-                ],
-              },
-            ],
-          });
 
-          console.log('RTCPeerConnection : ', this.peerConnection);
-          this.peerConnection.onicecandidate = (candidate: RTCIceCandidate) => {
-            console.log('ICE Candidate : ', candidate);
-            this.socketservice.sendIceCandidate({
-              from: this.fromClientId,
-              to: this.toClientId,
-              type: candidate.type,
-              candidate: candidate.candidate,
-            });
-          };
+          this.communicationService.receiveOffer().subscribe(async (response: { offer: any }) => {
+            console.log('Offer Received : ', response.offer);
 
-          this.peerConnection.oniceconnectionstatechange = (connection: RTCIceConnectionState) => {
-            console.log('ICE Connection : ', connection);
-            console.log('ICE Connection State : ', this.peerConnection.iceConnectionState);
-          };
-
-          this.peerConnection.ondatachannel = (event: any) => {
-            console.log('Data Channel Attached');
-            const onChannelReady = () => {
-              this.dataChannel = event.channel;
-            };
-            if (event.channel.readyState !== 'open') {
-              event.channel.onopen = onChannelReady;
-            } else {
-              onChannelReady();
+            if (this.socketId !== response.offer.to) {
+              this.peerConnection[response.offer.to]
+                .setRemoteDescription(new RTCSessionDescription(response.offer.sdp))
+                .then(() => {
+                  this.peerConnection[response.offer.to].createAnswer().then(async (answer: RTCSessionDescription) => {
+                    console.log('Answer Created : ', answer);
+                    await this.peerConnection[response.offer.to].setLocalDescription(answer);
+                    this.communicationService.sendAnswer({
+                      from: this.socketId,
+                      to: response.offer.to,
+                      type: 'answer',
+                      sdp: answer.sdp,
+                    });
+                  });
+                });
             }
-          };
+          });
 
-          this.peerConnection.ontrack = (event: any) => {
-            if (this.videoEnable) {
-              this.remoteVideo = this.remoteVideoElement.nativeElement;
-              console.log('Video Track Received');
-              try {
-                this.remoteVideo.srcObject = event.streams[0];
-              } catch (err) {
-                this.remoteVideo.src = window.URL.createObjectURL(event.streams[0]);
-              }
-              setTimeout(() => {
-                this.remoteVideo.play();
-              }, 500);
-            } else if (this.screenEnable) {
-              this.remoteScreen = this.remoteScreenElement.nativeElement;
-              console.log('Screen Track Received');
-              try {
-                this.remoteScreen.srcObject = event.streams[0];
-              } catch (err) {
-                this.remoteScreen.src = window.URL.createObjectURL(event.streams[0]);
-              }
-              setTimeout(() => {
-                this.remoteScreen.play();
-              }, 500);
+          this.communicationService.receiveAnswer().subscribe(async (response: { answer: any }) => {
+            console.log('Answer Received : ', response.answer);
+
+            const newDesc = { type: response.answer.type, sdp: response.answer.sdp };
+
+            if (this.socketId !== response.answer.from) {
+              await this.peerConnection[response.answer.from].setRemoteDescription(new RTCSessionDescription(newDesc));
             }
-          };
-
-          this.socketservice.receiveOffer().subscribe(async (offer: RTCSessionDescription) => {
-            console.log('Offer Received : ', offer);
-            await this.peerConnection.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
-            // tslint:disable-next-line: no-string-literal
-            this.toClientId = offer['from'];
-            this.peerConnection.createAnswer().then(async (answer: RTCSessionDescription) => {
-              console.log('Answer Created : ', answer);
-              await this.peerConnection.setLocalDescription(answer);
-              this.socketservice.sendAnswer({
-                from: this.fromClientId,
-                to: this.toClientId,
-                type: answer.type,
-                sdp: answer.sdp,
-              });
-            });
           });
 
-          this.socketservice.receiveAnswer().subscribe(async (answer: RTCSessionDescription) => {
-            console.log('Answer Received : ', answer);
-            await this.peerConnection.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
-          });
-
-          this.socketservice.receiveIceCandidate().subscribe((candidate: RTCIceCandidate) => {
-            if (candidate.candidate) {
-              console.log('ICE Candidate Received : ', candidate);
-              // this.peerConnection.addIceCandidate(candidate.candidate);
+          this.communicationService.receiveIceCandidate().subscribe((response: { candidate: any }) => {
+            console.log('ICE Candidate Received : ', response.candidate);
+            if (response.candidate.candidate) {
+              this.peerConnection[response.candidate.from].addIceCandidate(response.candidate.candidate);
             }
           });
         } else {
@@ -193,6 +153,81 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  public async connect(toConnect: string[]) {
+    if (toConnect.length > 0) {
+      toConnect.forEach((e) => {
+        this.createDataChannel(e);
+      });
+
+      toConnect.forEach((e) => {
+        this.peerConnection[e]
+          .createOffer({
+            offerToReceiveAudio: 1,
+            offerToReceiveVideo: 1,
+            voiceActivityDetection: 1,
+          })
+          .then(async (offer: RTCSessionDescription) => {
+            await this.peerConnection[e].setLocalDescription(offer).then(() => {
+              this.communicationService.sendOffer({
+                from: this.socketId,
+                to: e,
+                sdp: this.peerConnection[e].localDescription,
+              });
+            });
+          });
+      });
+    }
+  }
+
+  configurePeerConnection(peerConnection: any, toId: string) {
+    peerConnection.onicecandidate = (candidate: RTCIceCandidate) => {
+      this.communicationService.sendIceCandidate({
+        from: this.socketId,
+        to: toId,
+        type: candidate.type,
+        candidate: candidate.candidate,
+      });
+    };
+
+    peerConnection.ondatachannel = (event: any) => {
+      console.log('Data Channel Attached');
+      const onChannelReady = () => {
+        this.dataChannel[toId] = event.channel;
+      };
+      if (event.channel.readyState !== 'open') {
+        event.channel.onopen = onChannelReady;
+      } else {
+        onChannelReady();
+      }
+    };
+
+    peerConnection.ontrack = (event: any) => {
+      if (this.videoEnable) {
+        this.remoteVideo = this.remoteVideoElement.nativeElement;
+        console.log('Video Track Received');
+        try {
+          this.remoteVideo.srcObject = event.streams[0];
+        } catch (err) {
+          this.remoteVideo.src = window.URL.createObjectURL(event.streams[0]);
+        }
+        setTimeout(() => {
+          this.remoteVideo.play();
+        }, 500);
+      } else if (this.screenEnable) {
+        this.remoteScreen = this.remoteScreenElement.nativeElement;
+        console.log('Screen Track Received');
+        try {
+          this.remoteScreen.srcObject = event.streams[0];
+        } catch (err) {
+          this.remoteScreen.src = window.URL.createObjectURL(event.streams[0]);
+        }
+        setTimeout(() => {
+          this.remoteScreen.play();
+        }, 500);
+      }
+    };
   }
 
   public getRTCPeerConnection() {
@@ -267,7 +302,11 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.video.src = window.URL.createObjectURL(this.videoStream);
           }
           stream.getTracks().forEach((track: any) => {
-            this.peerConnection.addTrack(track, stream);
+            this.peerConnection.forEach((element) => {
+              if (element) {
+                element.addTrack(track, stream);
+              }
+            });
           });
           setTimeout(() => {
             this.video.play();
@@ -305,7 +344,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.screen.src = window.URL.createObjectURL(this.screenStream);
         }
         stream.getTracks().forEach((track: any) => {
-          this.peerConnection.addTrack(track, stream);
+          // this.peerConnection.addTrack(track, stream);
         });
         setTimeout(() => {
           this.screen.play();
@@ -322,46 +361,33 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.screenStream.stop();
   }
 
-  public async connect() {
-    this.connected = true;
-    this.dataChannel = await this.peerConnection.createDataChannel('datachannel');
+  async createDataChannel(idConnection: string) {
+    this.dataChannel[idConnection] = await this.peerConnection[idConnection].createDataChannel('datachannel');
 
-    this.dataChannel.onerror = (error: any) => {
+    this.dataChannel[idConnection].onerror = (error: any) => {
       console.log('Data Channel Error:', error);
     };
-    this.dataChannel.onmessage = (event: any) => {
+    this.dataChannel[idConnection].onmessage = (event: any) => {
       if (this.textEnable) {
         console.log('Got Data Channel Message:', JSON.parse(event.data));
         this.messages.push(JSON.parse(event.data));
       }
     };
-    this.dataChannel.onopen = () => {
+    this.dataChannel[idConnection].onopen = () => {
       console.log('Data Channel Opened');
     };
-    this.dataChannel.onclose = () => {
+
+    this.dataChannel[idConnection].onclose = () => {
       console.log('The Data Channel is Closed');
     };
-    this.offer = this.peerConnection
-      .createOffer({
-        offerToReceiveAudio: 1,
-        offerToReceiveVideo: 1,
-        voiceActivityDetection: 1,
-      })
-      .then(async (offer: RTCSessionDescription) => {
-        console.log('Offer Created : ', offer);
-        await this.peerConnection.setLocalDescription(offer);
-        this.socketservice.sendOffer({
-          from: this.fromClientId,
-          to: this.toClientId,
-          type: offer.type,
-          sdp: offer.sdp,
-        });
-      });
   }
 
   public sendMessage() {
-    this.dataChannel.send(JSON.stringify({ clientId: this.fromClientId, data: this.message }));
-    this.messages.push(JSON.parse(JSON.stringify({ clientId: this.fromClientId, data: this.message })));
+    console.log(this.dataChannel);
+    this.dataChannel.forEach((e) => {
+      e.send(JSON.stringify({ clientId: this.socketId, data: this.message }));
+    });
+    this.messages.push(JSON.parse(JSON.stringify({ clientId: this.socketId, data: this.message })));
     this.message = '';
   }
 
@@ -372,7 +398,5 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       this.stopScreen();
     } catch (e) {}
-    this.connected = false;
-    this.toClientId = '';
   }
 }
