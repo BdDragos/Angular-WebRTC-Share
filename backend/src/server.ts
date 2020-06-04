@@ -243,7 +243,17 @@ export class Server {
                 clients: this.clients[socket['roomname']],
                 socketIds: this.clients[socket['roomname']].map((e) => e.socketId)
               });
+
+              this.io.sockets.in(socket['roomname']).emit('disconnected-client', { socketId: socket.id });
             }
+          });
+        }
+      });
+
+      socket.on('post-new-message', (newMessage: any) => {
+        if (this.clients[socket['roomname']]) {
+          this.io.sockets.in(socket['roomname']).emit('new-messages-received', {
+            newMessage
           });
         }
       });

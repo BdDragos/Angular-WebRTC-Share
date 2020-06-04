@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import * as io from 'socket.io-client';
+import { Message } from 'src/models/message.model';
 
 @Injectable()
 export class CommunicationService {
@@ -94,6 +95,26 @@ export class CommunicationService {
     return Observable.create((observer: any) => {
       this.socket.on('icecandidate', (candidate: any) => {
         observer.next(candidate);
+      });
+    });
+  };
+
+  public receiveMessages = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('new-messages-received', (response: any) => {
+        observer.next(response);
+      });
+    });
+  };
+
+  public sendMessageText = (message: Message) => {
+    this.socket.emit('post-new-message', message);
+  };
+
+  public onDisconnectedClient = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('disconnected-client', (response: any) => {
+        observer.next(response);
       });
     });
   };

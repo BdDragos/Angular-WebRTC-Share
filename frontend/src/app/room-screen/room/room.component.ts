@@ -1,8 +1,9 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CommunicationService } from 'src/app/services/communication.service';
 import { Client } from 'src/models/client.model';
+import { Message } from 'src/models/message.model';
 
 @Component({
   selector: 'app-room',
@@ -16,15 +17,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   public clientId: any = '';
   public socketId: any = '';
   public clients: Client[] = [];
-  public textEnable = true;
   public videoEnable = false;
   public screenEnable = false;
   public fromClientId: any;
   public toClientId: string[] = [];
   public peerConnection: any[] = [];
-  public dataChannel: any[] = [];
   public message: any;
-  public messages: string[] = [];
+  public messagesList: Message[] = [];
   public audio: any;
   public remoteAudio: any;
   public videoTrack: VideoTrack;
@@ -49,7 +48,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild('screenElement', { static: false }) screenElement: ElementRef;
   @ViewChild('remoteScreenElement', { static: false }) remoteScreenElement: ElementRef;
 
-  constructor(public communicationService: CommunicationService, private router: Router, private route: ActivatedRoute) {
+  constructor(
+    public communicationService: CommunicationService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private cdk: ChangeDetectorRef
+  ) {
     this.loggedUserName = localStorage.getItem('username');
     if (!this.loggedUserName) {
       this.router.navigate(['/main']);
@@ -66,6 +70,19 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.route.params.subscribe((params) => {
         if (this.communicationService) {
           this.communicationService.onInit(this.loggedUserName, params.roomname);
+
+          this.communicationService.receiveMessages().subscribe((response: any) => {
+            this.messagesList.push(response.newMessage);
+            console.log(response.newMessage);
+            this.cdk.detectChanges();
+          });
+
+          this.communicationService.onDisconnectedClient().subscribe((response: any) => {
+            if (this.peerConnection[response.socketId]) {
+              this.peerConnection[response.socketId].disconnect();
+              delete this.peerConnection[response.socketId];
+            }
+          });
 
           this.subscriptionArray.push(
             this.communicationService.getSocketId().subscribe((message: any) => {
@@ -139,7 +156,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.communicationService.receiveIceCandidate().subscribe((response: { candidate: any }) => {
             console.log('ICE Candidate Received : ', response.candidate);
             if (response.candidate.candidate) {
-              this.peerConnection[response.candidate.from].addIceCandidate(response.candidate.candidate);
+              this.peerConnection[response.candidate.from].addIceCandidate(new RTCIceCandidate(response.candidate.candidate));
             }
           });
         } else {
@@ -151,30 +168,8 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   configurePeerConnection(toId: string) {
     this.peerConnection[toId] = new RTCPeerConnection({
-      iceServers: [],
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
-
-    this.peerConnection[toId].onicecandidate = (candidate: RTCIceCandidate) => {
-      this.communicationService.sendIceCandidate({
-        from: this.socketId,
-        to: toId,
-        type: candidate.type,
-        candidate: candidate.candidate,
-      });
-    };
-
-    this.peerConnection[toId].ondatachannel = (event: any) => {
-      console.log('Data Channel Attached');
-      const onChannelReady = () => {
-        this.dataChannel[toId] = event.channel;
-      };
-      if (event.channel.readyState !== 'open') {
-        event.channel.onopen = onChannelReady;
-      } else {
-        onChannelReady();
-      }
-    };
-
 
     this.peerConnection[toId].ontrack = (event: any) => {
       if (this.videoEnable) {
@@ -201,16 +196,19 @@ export class RoomComponent implements OnInit, OnDestroy {
         }, 500);
       }
     };
+
+    this.peerConnection[toId].onicecandidate = (candidate: RTCIceCandidate) => {
+      this.communicationService.sendIceCandidate({
+        from: this.socketId,
+        to: toId,
+        type: candidate.type,
+        candidate: candidate.candidate,
+      });
+    };
   }
 
   public async connect(toConnect: string[]) {
     if (toConnect.length > 0) {
-      toConnect.forEach((e) => {
-        this.createDataChannel(e);
-      });
-
-      console.log('ENTERED CONNECT: ' + this.dataChannel + ' ' + toConnect);
-
       toConnect.forEach((e) => {
         if (e !== this.socketId) {
           this.peerConnection[e]
@@ -231,27 +229,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       });
     }
-  }
-
-  async createDataChannel(idConnection: string) {
-    this.dataChannel[idConnection] = await this.peerConnection[idConnection].createDataChannel('datachannel');
-
-    this.dataChannel[idConnection].onerror = (error: any) => {
-      console.log('Data Channel Error:', error);
-    };
-    this.dataChannel[idConnection].onmessage = (event: any) => {
-      if (this.textEnable) {
-        console.log('Got Data Channel Message:', JSON.parse(event.data));
-        this.messages.push(JSON.parse(event.data));
-      }
-    };
-    this.dataChannel[idConnection].onopen = () => {
-      console.log('Data Channel Opened');
-    };
-
-    this.dataChannel[idConnection].onclose = () => {
-      console.log('The Data Channel is Closed');
-    };
   }
 
   public getRTCPeerConnection() {
@@ -282,23 +259,10 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-  public enableText() {
-    try {
-      this.stopVideo();
-    } catch (e) {}
-    try {
-      this.stopScreen();
-    } catch (e) {}
-    this.textEnable = true;
-    this.videoEnable = false;
-    this.screenEnable = false;
-  }
-
   public enableVideo() {
     try {
       this.stopScreen();
     } catch (e) {}
-    this.textEnable = false;
     this.videoEnable = true;
     this.screenEnable = false;
     setTimeout(() => {
@@ -326,9 +290,9 @@ export class RoomComponent implements OnInit, OnDestroy {
             this.video.src = window.URL.createObjectURL(this.videoStream);
           }
           stream.getTracks().forEach((track: any) => {
-            this.peerConnection.forEach((element) => {
-              element.addTrack(track, stream);
-            });
+            for (const [key, value] of Object.entries(this.peerConnection)) {
+              value.addTrack(track, stream);
+            }
           });
           setTimeout(() => {
             this.video.play();
@@ -342,7 +306,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       this.stopVideo();
     } catch (e) {}
-    this.textEnable = false;
     this.videoEnable = false;
     this.screenEnable = true;
     setTimeout(() => {
@@ -366,9 +329,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.screen.src = window.URL.createObjectURL(this.screenStream);
         }
         stream.getTracks().forEach((track: any) => {
-          this.peerConnection.forEach((e) => {
-            e.addTrack(track, stream);
-          });
+          for (const [key, value] of Object.entries(this.peerConnection)) {
+            value.addTrack(track, stream);
+          }
         });
         setTimeout(() => {
           this.screen.play();
@@ -386,11 +349,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   public sendMessage() {
-    console.log(this.dataChannel);
-    this.dataChannel.forEach((e) => {
-      e.send(JSON.stringify({ clientId: this.socketId, data: this.message }));
-    });
-    this.messages.push(JSON.parse(JSON.stringify({ clientId: this.socketId, data: this.message })));
+    this.communicationService.sendMessageText({ clientId: this.socketId, data: this.message });
     this.message = '';
   }
 

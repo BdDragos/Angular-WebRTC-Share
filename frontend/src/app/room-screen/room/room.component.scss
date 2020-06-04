@@ -17,12 +17,25 @@
 
 .table {
   overflow: auto;
+  height: calc(100% - 21%);
 }
 
 .w-30 {
   width: 30%;
 }
 
+.w-45 {
+  width: 45%;
+}
+
 .h-90 {
   height: 90%;
+}
+
+.h-93 {
+  height: 93%;
+}
+
+.m-r-3 {
+  margin-right: 3%;
 }
