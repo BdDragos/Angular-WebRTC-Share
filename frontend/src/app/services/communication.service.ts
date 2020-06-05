@@ -118,4 +118,12 @@ export class CommunicationService {
       });
     });
   };
+
+  public onAlreadyConnected = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('already-connected', (response: any) => {
+        observer.next(response);
+      });
+    });
+  };
 }

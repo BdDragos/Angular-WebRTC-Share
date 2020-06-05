@@ -155,8 +155,6 @@ export class Server {
     this.io.on('connection', (socket) => {
       socket.on('add-user', (username, roomname) => {
         if (socket) {
-          socket.join(roomname);
-
           if (!this.clients) {
             this.clients = {};
           }
@@ -165,11 +163,15 @@ export class Server {
             this.clients[roomname] = [];
           }
 
-          if (this.clients[username]) {
+          if (this.clients[roomname].find((e) => e.clientId === username)) {
+            socket.emit('already-connected', { text: 'You are already connected' });
+
+            socket.leave(socket['roomname']);
             socket.disconnect();
-            socket.leaveAll();
             return;
           }
+
+          socket.join(roomname);
 
           const newClient = {
             socketId: socket.id,
@@ -238,6 +240,8 @@ export class Server {
               var socketIndex = this.clients[socket['roomname']].indexOf(client);
               this.clients[socket['roomname']].splice(socketIndex, 1);
               console.log(socket.id + ' - client disconnected');
+
+              socket.leave(socket['roomname']);
 
               this.io.sockets.in(socket['roomname']).emit('clients', {
                 clients: this.clients[socket['roomname']],

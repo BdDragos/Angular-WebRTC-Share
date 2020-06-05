@@ -27,13 +27,13 @@
   <div class="w-50 h-100 p-l-3 ml-auto">
     <div class="card w-100 h-100 overflow-auto">
       <div #cameraDivList class="card-body grid-system-videos">
-        <video #videoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
-          <source />
-        </video>
+        <div [ngClass]="{ 'd-none': !localVideoIsPlaying }" class="w-100 h-auto m-b-3">
+          <video #videoElement muted class="video-class" width="{{ videoWidth }}" height="{{ videoHeight }}">
+            <source />
+          </video>
 
-        <video #remoteVideoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
-          <source />
-        </video>
+          <div class="text-center m-top-2">{{ this.clientId }}</div>
+        </div>
       </div>
     </div>
   </div>
