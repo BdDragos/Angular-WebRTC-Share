@@ -1,16 +1,3 @@
-.w-25 {
-  width: 25%;
-}
-
-.container {
-  width: 100%;
-  height: calc(100% - 50px);
-}
-
-.footer {
-  padding-top: 20px;
-}
-
 .card {
   background: linear-gradient(147deg, #000000 0%, #2c3e50 74%);
 }
@@ -24,12 +11,20 @@
   width: 30%;
 }
 
-.w-45 {
-  width: 45%;
+.w-20 {
+  width: 20%;
 }
 
-.h-93 {
-  height: 93%;
+.w-25 {
+  width: 25%;
+}
+
+.w-60 {
+  width: 60%;
+}
+
+.h-94 {
+  height: 94%;
 }
 
 .m-r-3 {
@@ -49,3 +44,46 @@
 .m-b-3 {
   margin-bottom: 3%;
 }
+
+.right-side-chat {
+  width: 21%;
+}
+
+.center-element {
+  width: 60%;
+}
+
+.left-user-info {
+  width: 19%;
+}
+
+.video-background {
+  background: url('../../../assets/svg/camera.svg') no-repeat;
+}
+
+.screen-background {
+  background: url('../../../assets/svg/screen.svg') no-repeat;
+}
+
+.audio-background {
+  background: url('../../../assets/svg/microphone.svg') no-repeat;
+}
+
+.svg-icon-class {
+  width: 15%;
+  height: 100%;
+  filter: invert(1);
+}
+
+.h-5 {
+  height: 5%;
+}
+
+.call-icon {
+  margin-left: auto;
+  margin-right: auto;
+  width: 25% !important;
+  margin-top: 5%;
+}
+
+

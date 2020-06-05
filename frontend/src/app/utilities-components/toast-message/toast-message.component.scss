@@ -3,6 +3,8 @@
 
 .icon-cancel {
   background: url('../../../assets/svg/x-icon.svg') no-repeat;
+  background-size: contain;
+  filter: invert(1);
 }
 
 .toast-text-container {
@@ -12,10 +14,6 @@
   height: 54px;
   color: white;
   display: flex;
-}
-
-.toast-close-div {
-  display: none;
 }
 
 .toast-text {
@@ -35,9 +33,12 @@
 }
 
 .toast-close-icon {
-  color: #ffffff;
-  font-weight: bold;
-  font-size: 14px;
+  width: 20px;
+  height: 15px;
+  margin-top: 5px;
+  position: absolute;
+  right: 0;
+
   &:hover {
     cursor: pointer;
   }

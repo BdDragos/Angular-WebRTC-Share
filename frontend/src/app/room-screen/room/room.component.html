@@ -1,33 +1,35 @@
 <div class="d-flex h-100">
-  <div class="left-elements w-25 h-100">
+  <div class="left-user-info h-100">
     <div class="card">
-      <div class="card-body">
-        <strong>You:</strong> : {{ clientId }}
-        <br />
-        <strong>Socket ID</strong> : {{ socketId }}
-      </div>
+      <div class="card-body"><strong>You:</strong> : {{ clientId }}</div>
     </div>
 
     <table class="table table-dark table-striped m-top-2">
       <thead>
         <tr class="text-center">
           <th>In room</th>
-          <th>Socket ID</th>
+          <th>Audio</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let client of clients" class="text-center">
           <td>{{ client.clientId }}</td>
-          <td>{{ client.socketId }}</td>
+          <td>
+            <audio [id]="client.socketId">
+              <source />
+            </audio>
+
+            <div class="audio-background svg-icon-class call-icon"></div>
+          </td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="w-50 h-100 p-l-3 ml-auto">
+  <div class="center-element h-100 p-l-1 ml-auto">
     <div class="card w-100 h-100 overflow-auto">
       <div #cameraDivList class="card-body grid-system-videos">
-        <div [ngClass]="{ 'd-none': !localVideoIsPlaying || localScreenIsShared }" class="w-100 h-auto m-b-3">
+        <div [ngClass]="{ 'd-none': !localVideoIsPlaying && !localScreenIsShared }" class="w-100 h-auto m-b-3">
           <video #videoElement muted class="video-class" width="{{ videoWidth }}" height="{{ videoHeight }}">
             <source />
           </video>
@@ -38,20 +40,16 @@
     </div>
   </div>
 
-  <div class="w-30 h-100 p-l-3 ml-auto">
-    <div class="top-buttons w-100">
-      <div class="row d-flex">
-        <button class="w-45" (click)="enableVideo()">
-          Video
-        </button>
-
-        <button class="w-45 ml-auto" (click)="enableScreen()">
-          Screen
-        </button>
+  <div class="right-side-chat h-100 p-l-1 ml-auto">
+    <div class="top-buttons h-5 w-100">
+      <div class="row d-flex h-100">
+        <div class="video-background svg-icon-class" (click)="enableVideo()"></div>
+        <div class="ml-auto screen-background svg-icon-class" (click)="enableScreen()"></div>
+        <div class="ml-auto audio-background svg-icon-class" (click)="enableAudio()"></div>
       </div>
     </div>
 
-    <div class="main-window w-100 h-93 m-top-2">
+    <div class="main-window w-100 h-94 m-top-2">
       <div class="row h-100">
         <div class="card w-100 h-90">
           <div #messageBox class="card-body overflow-auto h-100">

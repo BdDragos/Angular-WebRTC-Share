@@ -30,10 +30,17 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   public localVideoIsPlaying = false;
   public localScreenIsShared = false;
+  public localAudioIsPlaying = false;
 
+  public videoSender: RTCRtpSender[] = [];
+  public audioSender: RTCRtpSender[] = [];
+
+  public audioStream: any;
   public videoStream: any;
   public videoWidth = 400;
   public videoHeight = 300;
+
+  public audioIsActive: any = {};
 
   private loggedUserName = '';
 
@@ -85,7 +92,7 @@ export class RoomComponent implements OnInit, OnDestroy {
             if (this.peerConnection[response.socketId]) {
               this.peerConnection[response.socketId].close();
               delete this.peerConnection[response.socketId];
-              this.removeRemoteStream(response.socketId);
+              this.removeRemoteVideoStream(response.socketId);
             }
           });
 
@@ -175,14 +182,24 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
 
     this.peerConnection[toId].ontrack = (event: any) => {
-      console.log('Video Track Received');
+      console.log('Track Received: ' + event.track.kind);
 
       event.streams[0].onremovetrack = (removeEvent: any) => {
         console.log('Track remove request');
-        this.removeRemoteStream(toId);
+        console.log(removeEvent);
+
+        if (event.track.kind === 'video') {
+          this.removeRemoteVideoStream(toId);
+        } else if (event.track.kind === 'audio') {
+          this.removeRemoteAudioStream(toId);
+        }
       };
 
-      this.gotRemoteStream(event.streams[0], toId);
+      if (event.track.kind === 'video') {
+        this.gotRemoteVideoStream(event.streams[0], toId);
+      } else if (event.track.kind === 'audio') {
+        this.gotRemoteAudioStream(event.streams[0], toId);
+      }
     };
 
     this.peerConnection[toId].onicegatheringstatechange = async () => {
@@ -260,6 +277,36 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  public enableAudio() {
+    if (this.localAudioIsPlaying) {
+      this.stopAudio();
+      return;
+    }
+
+    this.stopAudio();
+    this.localAudioIsPlaying = true;
+
+    setTimeout(() => {
+      const constraints = { audio: true, video: false };
+      this.browser.mediaDevices.getUserMedia(constraints).then((stream: any) => {
+        if (!stream.stop && stream.getTracks) {
+          stream.stop = function () {
+            this.getTracks().forEach((track: any) => {
+              track.stop();
+            });
+          };
+        }
+        this.audioStream = stream;
+
+        stream.getTracks().forEach((track: any) => {
+          for (const [key, value] of Object.entries(this.peerConnection)) {
+            this.audioSender[key] = value.addTrack(track, stream);
+          }
+        });
+      });
+    }, 1000);
+  }
+
   public enableVideo() {
     if (this.localVideoIsPlaying) {
       this.stopVideo();
@@ -272,7 +319,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       if (this.videoElement) {
         this.video = this.videoElement.nativeElement;
-        const constraints = { audio: true, video: { minFrameRate: 60, width: 400, height: 300 } };
+        const constraints = { video: { minFrameRate: 24, width: 400, height: 300 } };
         this.browser.mediaDevices.getUserMedia(constraints).then((stream: any) => {
           if (!stream.stop && stream.getTracks) {
             stream.stop = function () {
@@ -295,7 +342,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
           stream.getTracks().forEach((track: any) => {
             for (const [key, value] of Object.entries(this.peerConnection)) {
-              value.addTrack(track, stream);
+              this.videoSender[key] = value.addTrack(track, stream);
             }
           });
           setTimeout(() => {
@@ -341,7 +388,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
         stream.getTracks().forEach((track: any) => {
           for (const [key, value] of Object.entries(this.peerConnection)) {
-            value.addTrack(track, stream);
+            this.videoSender[key] = value.addTrack(track, stream);
           }
         });
         setTimeout(() => {
@@ -351,19 +398,28 @@ export class RoomComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  public stopVideo() {
-    if (this.videoStream && this.videoStream.active) {
+  public stopChoosenStream(streamType: any, streamSender: RTCRtpSender[]) {
+    if (streamType && streamType.active) {
       for (const [key, value] of Object.entries(this.peerConnection)) {
-        value.getSenders().forEach((e) => {
-          value.removeTrack(e);
-          console.log(e);
-        });
+        if (streamSender[key]) {
+          value.removeTrack(streamSender[key]);
+          delete streamSender[key];
+        }
       }
 
-      this.videoStream.stop();
-      this.localVideoIsPlaying = false;
-      this.localScreenIsShared = false;
+      streamType.stop();
     }
+  }
+
+  public stopAudio() {
+    this.stopChoosenStream(this.audioStream, this.audioSender);
+    this.localAudioIsPlaying = false;
+  }
+
+  public stopVideo() {
+    this.stopChoosenStream(this.videoStream, this.videoSender);
+    this.localVideoIsPlaying = false;
+    this.localScreenIsShared = false;
   }
 
   public sendMessage() {
@@ -373,10 +429,11 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   public disconnect() {
     this.stopVideo();
+    this.stopAudio();
   }
 
-  gotRemoteStream(event, id) {
-    this.removeRemoteStream(id);
+  gotRemoteVideoStream(event, id) {
+    this.removeRemoteVideoStream(id);
 
     const cameraListDiv = this.cameraDivList.nativeElement;
 
@@ -425,10 +482,41 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeRemoteStream(id) {
+  gotRemoteAudioStream(event, id) {
+    const foundAudioStream: HTMLAudioElement = document.getElementById(id) as HTMLAudioElement;
+
+    if (foundAudioStream) {
+      this.audioIsActive.id = true;
+      this.cdk.detectChanges();
+      setTimeout(() => {
+        console.log(this.audioIsActive.id);
+        try {
+          foundAudioStream.srcObject = event;
+        } catch (err) {
+          foundAudioStream.src = window.URL.createObjectURL(event);
+        }
+
+        foundAudioStream.play();
+      });
+    }
+  }
+
+  removeRemoteVideoStream(id) {
     const videoParent = document.querySelector('[data-socket="' + id + '"]');
     if (videoParent) {
       this.cameraDivList.nativeElement.removeChild(videoParent);
+    }
+  }
+
+  removeRemoteAudioStream(id) {
+    this.audioIsActive[id] = false;
+  }
+
+  checkIfActive(id) {
+    if (this.audioIsActive.id) {
+      return true;
+    } else {
+      return false;
     }
   }
 }
