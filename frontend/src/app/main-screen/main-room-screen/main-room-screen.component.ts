@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { ConfigureRoomComponent } from '../configure-room/configure-room.component';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-main-room-screen',
@@ -10,7 +11,7 @@ import { ConfigureRoomComponent } from '../configure-room/configure-room.compone
   styleUrls: ['./main-room-screen.component.scss'],
 })
 export class MainRoomScreenComponent implements OnInit {
-  constructor(public dialog: MatDialog, private router: Router) {}
+  constructor(public authenticationService: AuthService, public dialog: MatDialog, private router: Router) {}
 
   ngOnInit(): void {}
 
@@ -38,5 +39,9 @@ export class MainRoomScreenComponent implements OnInit {
       if (result) {
       }
     });
+  }
+
+  logout() {
+    this.authenticationService.logout();
   }
 }

@@ -27,7 +27,7 @@
   <div class="w-50 h-100 p-l-3 ml-auto">
     <div class="card w-100 h-100 overflow-auto">
       <div #cameraDivList class="card-body grid-system-videos">
-        <div [ngClass]="{ 'd-none': !localVideoIsPlaying }" class="w-100 h-auto m-b-3">
+        <div [ngClass]="{ 'd-none': !localVideoIsPlaying || localScreenIsShared }" class="w-100 h-auto m-b-3">
           <video #videoElement muted class="video-class" width="{{ videoWidth }}" height="{{ videoHeight }}">
             <source />
           </video>
@@ -54,7 +54,7 @@
     <div class="main-window w-100 h-93 m-top-2">
       <div class="row h-100">
         <div class="card w-100 h-90">
-          <div class="card-body">
+          <div #messageBox class="card-body overflow-auto h-100">
             <div *ngFor="let message of messagesList">
               <strong>Client-{{ message.clientId }} : </strong> {{ message.data }}
             </div>

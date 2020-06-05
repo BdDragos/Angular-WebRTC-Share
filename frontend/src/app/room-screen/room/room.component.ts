@@ -1,4 +1,3 @@
-import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -6,6 +5,7 @@ import { CommunicationService } from 'src/app/services/communication.service';
 import { Client } from 'src/models/client.model';
 import { Message } from 'src/models/message.model';
 import 'webrtc-adapter';
+import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
 
 @Component({
   selector: 'app-room',
@@ -20,8 +20,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   public socketId: any = '';
   public clients: Client[] = [];
   public fromClientId: any;
-  public toClientId: string[] = [];
-  public peerConnection: any[] = [];
+
+  public peerConnection: RTCPeerConnection[] = [];
   public message: any;
   public messagesList: Message[] = [];
 
@@ -29,16 +29,17 @@ export class RoomComponent implements OnInit, OnDestroy {
   public video: HTMLVideoElement;
 
   public localVideoIsPlaying = false;
+  public localScreenIsShared = false;
 
   public videoStream: any;
   public videoWidth = 400;
   public videoHeight = 300;
 
-  private toConnect: string[] = [];
   private loggedUserName = '';
 
   @ViewChild('videoElement', { static: false }) videoElement: ElementRef;
   @ViewChild('cameraDivList', { static: false }) cameraDivList: ElementRef;
+  @ViewChild('messageBox', { static: false }) messageBox: ElementRef;
 
   constructor(
     public communicationService: CommunicationService,
@@ -76,12 +77,13 @@ export class RoomComponent implements OnInit, OnDestroy {
 
           this.communicationService.receiveMessages().subscribe((response: any) => {
             this.messagesList.push(response.newMessage);
-            console.log(response.newMessage);
+            this.messageBox.nativeElement.scrollTop = this.messageBox.nativeElement.scrollHeight;
             this.cdk.detectChanges();
           });
 
           this.communicationService.onDisconnectedClient().subscribe((response: any) => {
             if (this.peerConnection[response.socketId]) {
+              this.peerConnection[response.socketId].close();
               delete this.peerConnection[response.socketId];
               this.removeRemoteStream(response.socketId);
             }
@@ -97,13 +99,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           );
 
           this.communicationService.getClients().subscribe((response: { clients: Client[]; socketIds: string[] }) => {
-            this.toConnect = [];
-
             response.socketIds.forEach((e) => {
-              if (this.toClientId.findIndex((f) => f === e) < 0) {
-                this.toClientId.push(e);
-
-                this.toConnect.push(e);
+              if (!this.peerConnection[e]) {
+                this.configurePeerConnection(e);
               }
             });
 
@@ -113,18 +111,6 @@ export class RoomComponent implements OnInit, OnDestroy {
             );
 
             this.clients = response.clients;
-
-            this.toConnect.forEach((e) => {
-              this.configurePeerConnection(e);
-            });
-
-            if (this.toClientId.findIndex((e) => e === this.socketId) === this.toClientId.length - 1) {
-              if (this.toConnect.length > 0) {
-                this.toConnect.forEach((e) => {
-                  this.connect(e);
-                });
-              }
-            }
           });
 
           this.communicationService.receiveOffer().subscribe(async (response: { offer: any }) => {
@@ -191,6 +177,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.peerConnection[toId].ontrack = (event: any) => {
       console.log('Video Track Received');
 
+      event.streams[0].onremovetrack = (removeEvent: any) => {
+        console.log('Track remove request');
+        this.removeRemoteStream(toId);
+      };
+
       this.gotRemoteStream(event.streams[0], toId);
     };
 
@@ -211,36 +202,34 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.peerConnection[toId].onnegotiationneeded = (event: any) => {
       console.log('RENEGOTATION NEEDED');
-      console.log(event);
-
       this.connect(toId);
     };
 
-    // if (this.localVideoIsPlaying) {
-    //   this.videoStream.getTracks().forEach((track: any) => {
-    //     this.peerConnection[toId].addTrack(track, this.videoStream);
-    //   });
-    // }
+    if (this.localVideoIsPlaying || this.localScreenIsShared) {
+      this.videoStream.getTracks().forEach((track: any) => {
+        this.peerConnection[toId].addTrack(track, this.videoStream);
+      });
+    }
   }
 
   public async connect(e: string) {
-    if (e !== this.socketId) {
-      this.peerConnection[e]
-        .createOffer({
-          offerToReceiveAudio: 1,
-          offerToReceiveVideo: 1,
-          voiceActivityDetection: 1,
-        })
-        .then(async (offer: RTCSessionDescription) => {
-          await this.peerConnection[e].setLocalDescription(offer).then(() => {
+    this.peerConnection[e]
+      .createOffer({
+        offerToReceiveAudio: 1,
+        offerToReceiveVideo: 1,
+        voiceActivityDetection: 1,
+      })
+      .then((offer: RTCSessionDescription) => {
+        this.peerConnection[e].setLocalDescription(offer).then(() => {
+          if (e !== this.socketId) {
             this.communicationService.sendOffer({
               from: this.socketId,
               to: e,
               sdp: this.peerConnection[e].localDescription,
             });
-          });
+          }
         });
-    }
+      });
   }
 
   public getRTCPeerConnection() {
@@ -272,10 +261,12 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   public enableVideo() {
-    try {
+    if (this.localVideoIsPlaying) {
       this.stopVideo();
-    } catch (e) {}
+      return;
+    }
 
+    this.stopVideo();
     this.localVideoIsPlaying = true;
 
     setTimeout(() => {
@@ -317,11 +308,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   public enableScreen() {
-    try {
+    if (this.localScreenIsShared) {
       this.stopVideo();
-    } catch (e) {}
+      return;
+    }
 
-    this.localVideoIsPlaying = true;
+    this.stopVideo();
+
+    this.localScreenIsShared = true;
 
     setTimeout(() => {
       this.video = this.videoElement.nativeElement;
@@ -358,19 +352,27 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   public stopVideo() {
-    this.videoStream.stop();
-    this.localVideoIsPlaying = false;
+    if (this.videoStream && this.videoStream.active) {
+      for (const [key, value] of Object.entries(this.peerConnection)) {
+        value.getSenders().forEach((e) => {
+          value.removeTrack(e);
+          console.log(e);
+        });
+      }
+
+      this.videoStream.stop();
+      this.localVideoIsPlaying = false;
+      this.localScreenIsShared = false;
+    }
   }
 
   public sendMessage() {
-    this.communicationService.sendMessageText({ clientId: this.socketId, data: this.message });
+    this.communicationService.sendMessageText({ clientId: this.clientId, data: this.message });
     this.message = '';
   }
 
   public disconnect() {
-    try {
-      this.stopVideo();
-    } catch (e) {}
+    this.stopVideo();
   }
 
   gotRemoteStream(event, id) {

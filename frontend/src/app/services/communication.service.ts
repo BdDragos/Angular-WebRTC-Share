@@ -49,7 +49,6 @@ export class CommunicationService {
     return Observable.create((observer: any) => {
       this.socket.on('currentSocket', (message: any) => {
         observer.next(message);
-        this.socket.emit('clients');
       });
     });
   };

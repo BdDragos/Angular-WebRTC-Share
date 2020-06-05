@@ -20,8 +20,10 @@ export class Server {
   private rooms: { owner: string; name: string; socket: any }[] = [];
 
   private USERS = [
-    { id: 1, username: 'admin' },
-    { id: 2, username: 'test' }
+    { id: 1, username: 'Admin' },
+    { id: 2, username: 'Dragos' },
+    { id: 3, username: 'User_2' },
+    { id: 4, username: 'User_3' }
   ];
 
   constructor() {
