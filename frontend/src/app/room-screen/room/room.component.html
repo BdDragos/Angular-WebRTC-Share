@@ -24,42 +24,16 @@
     </table>
   </div>
 
-  <div class="w-30 h-100 p-l-3 ml-auto">
-    <div class="row w-100" *ngIf="videoEnable">
-      <div class="card w-100">
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6 text-center">
-              <video #videoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
-                <source />
-              </video>
-            </div>
-            <div class="col-md-6 text-center">
-              <video #remoteVideoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
-                <source />
-              </video>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="w-50 h-100 p-l-3 ml-auto">
+    <div class="card w-100 h-100 overflow-auto">
+      <div #cameraDivList class="card-body grid-system-videos">
+        <video #videoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
+          <source />
+        </video>
 
-    <div class="row w-100" *ngIf="screenEnable">
-      <div class="card w-100">
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6 text-center">
-              <video #screenElement class="img-border" width="{{ screenWidth }}" height="{{ screenHeight }}">
-                <source />
-              </video>
-            </div>
-            <div class="col-md-6 text-center">
-              <video #remoteScreenElement class="img-border" width="{{ screenWidth }}" height="{{ screenHeight }}">
-                <source />
-              </video>
-            </div>
-          </div>
-        </div>
+        <video #remoteVideoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}">
+          <source />
+        </video>
       </div>
     </div>
   </div>

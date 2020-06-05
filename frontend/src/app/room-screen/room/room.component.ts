@@ -1,9 +1,10 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CommunicationService } from 'src/app/services/communication.service';
 import { Client } from 'src/models/client.model';
 import { Message } from 'src/models/message.model';
+import 'webrtc-adapter';
 
 @Component({
   selector: 'app-room',
@@ -17,13 +18,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   public clientId: any = '';
   public socketId: any = '';
   public clients: Client[] = [];
-  public videoEnable = false;
-  public screenEnable = false;
   public fromClientId: any;
   public toClientId: string[] = [];
   public peerConnection: any[] = [];
   public message: any;
   public messagesList: Message[] = [];
+
+  public negotationArray: any = {};
+
   public audio: any;
   public remoteAudio: any;
   public videoTrack: VideoTrack;
@@ -45,8 +47,6 @@ export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild('remoteAudioElement', { static: false }) remoteAudioElement: ElementRef;
   @ViewChild('videoElement', { static: false }) videoElement: ElementRef;
   @ViewChild('remoteVideoElement', { static: false }) remoteVideoElement: ElementRef;
-  @ViewChild('screenElement', { static: false }) screenElement: ElementRef;
-  @ViewChild('remoteScreenElement', { static: false }) remoteScreenElement: ElementRef;
 
   constructor(
     public communicationService: CommunicationService,
@@ -68,6 +68,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscriptionArray.push(
       this.route.params.subscribe((params) => {
+        window.RTCPeerConnection = this.getRTCPeerConnection();
+        window.RTCSessionDescription = this.getRTCSessionDescription();
+        window.RTCIceCandidate = this.getRTCIceCandidate();
+        this.browser.getUserMedia = this.getAllUserMedia();
+
         if (this.communicationService) {
           this.communicationService.onInit(this.loggedUserName, params.roomname);
 
@@ -79,7 +84,6 @@ export class RoomComponent implements OnInit, OnDestroy {
 
           this.communicationService.onDisconnectedClient().subscribe((response: any) => {
             if (this.peerConnection[response.socketId]) {
-              this.peerConnection[response.socketId].disconnect();
               delete this.peerConnection[response.socketId];
             }
           });
@@ -108,6 +112,7 @@ export class RoomComponent implements OnInit, OnDestroy {
               response.clients.findIndex((e) => e.clientId === this.clientId),
               1
             );
+
             this.clients = response.clients;
 
             this.toConnect.forEach((e) => {
@@ -115,12 +120,13 @@ export class RoomComponent implements OnInit, OnDestroy {
             });
 
             if (this.toClientId.findIndex((e) => e === this.socketId) === this.toClientId.length - 1) {
-              this.connect(this.toConnect);
+              if (this.toConnect.length > 0) {
+                this.toConnect.forEach((e) => {
+                  this.connect(e);
+                });
+              }
             }
-            console.log(this.socketId);
           });
-
-          this.browser.getUserMedia = this.getAllUserMedia();
 
           this.communicationService.receiveOffer().subscribe(async (response: { offer: any }) => {
             console.log('Offer Received : ', response.offer);
@@ -129,16 +135,24 @@ export class RoomComponent implements OnInit, OnDestroy {
               this.peerConnection[response.offer.from]
                 .setRemoteDescription(new RTCSessionDescription(response.offer.sdp))
                 .then(() => {
-                  this.peerConnection[response.offer.from].createAnswer().then(async (answer: RTCSessionDescription) => {
-                    console.log('Answer Created : ', answer);
-                    await this.peerConnection[response.offer.from].setLocalDescription(answer);
-                    this.communicationService.sendAnswer({
-                      from: this.socketId,
-                      to: response.offer.from,
-                      type: 'answer',
-                      sdp: answer.sdp,
+                  this.peerConnection[response.offer.from]
+                    .createAnswer()
+                    .then(async (answer: RTCSessionDescription) => {
+                      console.log('Answer Created : ', answer);
+                      await this.peerConnection[response.offer.from].setLocalDescription(answer);
+                      this.communicationService.sendAnswer({
+                        from: this.socketId,
+                        to: response.offer.from,
+                        type: 'answer',
+                        sdp: answer.sdp,
+                      });
+                    })
+                    .catch((event) => {
+                      console.log('ERROR CREATE ANSWER: ' + event);
                     });
-                  });
+                })
+                .catch((event) => {
+                  console.log('ERROR SET REMOTE: ' + event);
                 });
             }
           });
@@ -156,7 +170,11 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.communicationService.receiveIceCandidate().subscribe((response: { candidate: any }) => {
             console.log('ICE Candidate Received : ', response.candidate);
             if (response.candidate.candidate) {
-              this.peerConnection[response.candidate.from].addIceCandidate(new RTCIceCandidate(response.candidate.candidate));
+              this.peerConnection[response.candidate.from]
+                .addIceCandidate(new RTCIceCandidate(response.candidate.candidate))
+                .catch((event) => {
+                  console.log('ICE SET ERROR: ' + event);
+                });
             }
           });
         } else {
@@ -168,32 +186,25 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   configurePeerConnection(toId: string) {
     this.peerConnection[toId] = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      iceServers: [{ urls: 'stun:stun.2.google.com:19302' }],
     });
 
     this.peerConnection[toId].ontrack = (event: any) => {
-      if (this.videoEnable) {
-        this.remoteVideo = this.remoteVideoElement.nativeElement;
-        console.log('Video Track Received');
-        try {
-          this.remoteVideo.srcObject = event.streams[0];
-        } catch (err) {
-          this.remoteVideo.src = window.URL.createObjectURL(event.streams[0]);
-        }
-        setTimeout(() => {
-          this.remoteVideo.play();
-        }, 500);
-      } else if (this.screenEnable) {
-        this.remoteScreen = this.remoteScreenElement.nativeElement;
-        console.log('Screen Track Received');
-        try {
-          this.remoteScreen.srcObject = event.streams[0];
-        } catch (err) {
-          this.remoteScreen.src = window.URL.createObjectURL(event.streams[0]);
-        }
-        setTimeout(() => {
-          this.remoteScreen.play();
-        }, 500);
+      this.remoteVideo = this.remoteVideoElement.nativeElement;
+      console.log('Video Track Received');
+      try {
+        this.remoteVideo.srcObject = event.streams[0];
+      } catch (err) {
+        this.remoteVideo.src = window.URL.createObjectURL(event.streams[0]);
+      }
+      setTimeout(() => {
+        this.remoteVideo.play();
+      }, 500);
+    };
+
+    this.peerConnection[toId].onicegatheringstatechange = async () => {
+      if (this.peerConnection[toId].iceGatheringState === 'complete') {
+        console.log('ICE COMPLETED');
       }
     };
 
@@ -205,29 +216,42 @@ export class RoomComponent implements OnInit, OnDestroy {
         candidate: candidate.candidate,
       });
     };
+
+    this.negotationArray[toId] = false;
+
+    this.peerConnection[toId].onnegotiationneeded = (event: any) => {
+      // if (this.negotationArray[toId] === false) {
+      //   return;
+      // }
+
+      console.log('RENEGOTATION NEEDED');
+      console.log(event);
+
+      this.connect(toId);
+    };
   }
 
-  public async connect(toConnect: string[]) {
-    if (toConnect.length > 0) {
-      toConnect.forEach((e) => {
-        if (e !== this.socketId) {
-          this.peerConnection[e]
-            .createOffer({
-              offerToReceiveAudio: 1,
-              offerToReceiveVideo: 1,
-              voiceActivityDetection: 1,
-            })
-            .then(async (offer: RTCSessionDescription) => {
-              await this.peerConnection[e].setLocalDescription(offer).then(() => {
-                this.communicationService.sendOffer({
-                  from: this.socketId,
-                  to: e,
-                  sdp: this.peerConnection[e].localDescription,
-                });
-              });
+  public async connect(e: string) {
+    if (e !== this.socketId) {
+      this.negotationArray[e] = true;
+
+      this.peerConnection[e]
+        .createOffer({
+          offerToReceiveAudio: 1,
+          offerToReceiveVideo: 1,
+          voiceActivityDetection: 1,
+        })
+        .then(async (offer: RTCSessionDescription) => {
+          await this.peerConnection[e].setLocalDescription(offer).then(() => {
+            this.negotationArray[e] = false;
+
+            this.communicationService.sendOffer({
+              from: this.socketId,
+              to: e,
+              sdp: this.peerConnection[e].localDescription,
             });
-        }
-      });
+          });
+        });
     }
   }
 
@@ -263,8 +287,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       this.stopScreen();
     } catch (e) {}
-    this.videoEnable = true;
-    this.screenEnable = false;
     setTimeout(() => {
       if (this.videoElement) {
         this.video = this.videoElement.nativeElement;
@@ -306,10 +328,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     try {
       this.stopVideo();
     } catch (e) {}
-    this.videoEnable = false;
-    this.screenEnable = true;
     setTimeout(() => {
-      this.screen = this.screenElement.nativeElement;
+      this.screen = this.videoElement.nativeElement;
       this.getAllUserMediaScreen().then((stream: any) => {
         if (!stream.stop && stream.getTracks) {
           stream.stop = function () {
