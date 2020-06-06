@@ -6,6 +6,7 @@ import { Client } from 'src/models/client.model';
 import { Message } from 'src/models/message.model';
 import 'webrtc-adapter';
 import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
+import { Room } from 'src/models/room.model';
 
 @Component({
   selector: 'app-room',
@@ -37,11 +38,10 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   public audioStream: any;
   public videoStream: any;
-  public videoWidth = 400;
-  public videoHeight = 300;
 
   public audioIsActive: any = {};
 
+  public currentRoom = new Room();
   private loggedUserName = '';
 
   @ViewChild('videoElement', { static: false }) videoElement: ElementRef;
@@ -77,24 +77,41 @@ export class RoomComponent implements OnInit, OnDestroy {
         if (this.communicationService) {
           this.communicationService.onInit(this.loggedUserName, params.roomname);
 
-          this.communicationService.onAlreadyConnected().subscribe((response: any) => {
-            this.tooltipService.show({ text: 'You are already connected', type: 'warning' });
-            this.router.navigate(['/main']);
-          });
+          this.subscriptionArray.push(
+            this.communicationService.getRoomData().subscribe((response) => {
+              if (response) {
+                this.currentRoom = response;
+              } else {
+                this.tooltipService.show({ text: 'The room you were in no longer exists', type: 'warning' });
+                this.router.navigate(['/main']);
+              }
+            })
+          );
 
-          this.communicationService.receiveMessages().subscribe((response: any) => {
-            this.messagesList.push(response.newMessage);
-            this.messageBox.nativeElement.scrollTop = this.messageBox.nativeElement.scrollHeight;
-            this.cdk.detectChanges();
-          });
+          this.subscriptionArray.push(
+            this.communicationService.onAlreadyConnected().subscribe((response: any) => {
+              this.tooltipService.show({ text: 'You are already connected', type: 'warning' });
+              this.router.navigate(['/main']);
+            })
+          );
 
-          this.communicationService.onDisconnectedClient().subscribe((response: any) => {
-            if (this.peerConnection[response.socketId]) {
-              this.peerConnection[response.socketId].close();
-              delete this.peerConnection[response.socketId];
-              this.removeRemoteVideoStream(response.socketId);
-            }
-          });
+          this.subscriptionArray.push(
+            this.communicationService.receiveMessages().subscribe((response: any) => {
+              this.messagesList.push(response.newMessage);
+              this.messageBox.nativeElement.scrollTop = this.messageBox.nativeElement.scrollHeight;
+              this.cdk.detectChanges();
+            })
+          );
+
+          this.subscriptionArray.push(
+            this.communicationService.onDisconnectedClient().subscribe((response: any) => {
+              if (this.peerConnection[response.socketId]) {
+                this.peerConnection[response.socketId].close();
+                delete this.peerConnection[response.socketId];
+                this.removeRemoteVideoStream(response.socketId);
+              }
+            })
+          );
 
           this.subscriptionArray.push(
             this.communicationService.getSocketId().subscribe((message: any) => {
@@ -105,70 +122,78 @@ export class RoomComponent implements OnInit, OnDestroy {
             })
           );
 
-          this.communicationService.getClients().subscribe((response: { clients: Client[]; socketIds: string[] }) => {
-            response.socketIds.forEach((e) => {
-              if (!this.peerConnection[e]) {
-                this.configurePeerConnection(e);
-              }
-            });
+          this.subscriptionArray.push(
+            this.communicationService.getClients().subscribe((response: { clients: Client[]; socketIds: string[] }) => {
+              response.socketIds.forEach((e) => {
+                if (!this.peerConnection[e]) {
+                  this.configurePeerConnection(e);
+                }
+              });
 
-            response.clients.splice(
-              response.clients.findIndex((e) => e.clientId === this.clientId),
-              1
-            );
+              response.clients.splice(
+                response.clients.findIndex((e) => e.clientId === this.clientId),
+                1
+              );
 
-            this.clients = response.clients;
-          });
+              this.clients = response.clients;
+            })
+          );
 
-          this.communicationService.receiveOffer().subscribe(async (response: { offer: any }) => {
-            console.log('Offer Received : ', response.offer);
+          this.subscriptionArray.push(
+            this.communicationService.receiveOffer().subscribe(async (response: { offer: any }) => {
+              console.log('Offer Received : ', response.offer);
 
-            if (this.socketId !== response.offer.from) {
-              this.peerConnection[response.offer.from]
-                .setRemoteDescription(new RTCSessionDescription(response.offer.sdp))
-                .then(() => {
-                  this.peerConnection[response.offer.from]
-                    .createAnswer()
-                    .then(async (answer: RTCSessionDescription) => {
-                      console.log('Answer Created : ', answer);
-                      await this.peerConnection[response.offer.from].setLocalDescription(answer);
-                      this.communicationService.sendAnswer({
-                        from: this.socketId,
-                        to: response.offer.from,
-                        type: 'answer',
-                        sdp: answer.sdp,
+              if (this.socketId !== response.offer.from) {
+                this.peerConnection[response.offer.from]
+                  .setRemoteDescription(new RTCSessionDescription(response.offer.sdp))
+                  .then(() => {
+                    this.peerConnection[response.offer.from]
+                      .createAnswer()
+                      .then(async (answer: RTCSessionDescription) => {
+                        console.log('Answer Created : ', answer);
+                        await this.peerConnection[response.offer.from].setLocalDescription(answer);
+                        this.communicationService.sendAnswer({
+                          from: this.socketId,
+                          to: response.offer.from,
+                          type: 'answer',
+                          sdp: answer.sdp,
+                        });
+                      })
+                      .catch((event) => {
+                        console.log('ERROR CREATE ANSWER: ' + event);
                       });
-                    })
-                    .catch((event) => {
-                      console.log('ERROR CREATE ANSWER: ' + event);
-                    });
-                })
-                .catch((event) => {
-                  console.log('ERROR SET REMOTE: ' + event);
-                });
-            }
-          });
+                  })
+                  .catch((event) => {
+                    console.log('ERROR SET REMOTE: ' + event);
+                  });
+              }
+            })
+          );
 
-          this.communicationService.receiveAnswer().subscribe(async (response: { answer: any }) => {
-            console.log('Answer Received : ', response.answer);
+          this.subscriptionArray.push(
+            this.communicationService.receiveAnswer().subscribe(async (response: { answer: any }) => {
+              console.log('Answer Received : ', response.answer);
 
-            const newDesc = { type: response.answer.type, sdp: response.answer.sdp };
+              const newDesc = { type: response.answer.type, sdp: response.answer.sdp };
 
-            if (this.socketId !== response.answer.from) {
-              await this.peerConnection[response.answer.from].setRemoteDescription(new RTCSessionDescription(newDesc));
-            }
-          });
+              if (this.socketId !== response.answer.from) {
+                await this.peerConnection[response.answer.from].setRemoteDescription(new RTCSessionDescription(newDesc));
+              }
+            })
+          );
 
-          this.communicationService.receiveIceCandidate().subscribe((response: { candidate: any }) => {
-            console.log('ICE Candidate Received : ', response.candidate);
-            if (response.candidate.candidate) {
-              this.peerConnection[response.candidate.from]
-                .addIceCandidate(new RTCIceCandidate(response.candidate.candidate))
-                .catch((event) => {
-                  console.log('ICE SET ERROR: ' + event);
-                });
-            }
-          });
+          this.subscriptionArray.push(
+            this.communicationService.receiveIceCandidate().subscribe((response: { candidate: any }) => {
+              console.log('ICE Candidate Received : ', response.candidate);
+              if (response.candidate.candidate) {
+                this.peerConnection[response.candidate.from]
+                  .addIceCandidate(new RTCIceCandidate(response.candidate.candidate))
+                  .catch((event) => {
+                    console.log('ICE SET ERROR: ' + event);
+                  });
+              }
+            })
+          );
         } else {
           this.serverStatus = false;
         }
@@ -319,7 +344,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       if (this.videoElement) {
         this.video = this.videoElement.nativeElement;
-        const constraints = { video: { minFrameRate: 24, width: 400, height: 300 } };
+        const constraints = { video: this.currentRoom.videoQuality.video };
         this.browser.mediaDevices.getUserMedia(constraints).then((stream: any) => {
           if (!stream.stop && stream.getTracks) {
             stream.stop = function () {
@@ -466,8 +491,6 @@ export class RoomComponent implements OnInit, OnDestroy {
     video.controls = true;
     video.style.width = '100%';
     video.style.height = 'auto';
-    video.width = this.videoWidth;
-    video.height = this.videoHeight;
 
     cameraListDiv.appendChild(parentDiv);
 

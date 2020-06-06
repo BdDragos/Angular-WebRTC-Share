@@ -125,4 +125,12 @@ export class CommunicationService {
       });
     });
   };
+
+  public getRoomData = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('sent-room-data', (response: any) => {
+        observer.next(response);
+      });
+    });
+  };
 }

@@ -1,13 +1,14 @@
 import bodyParser from 'body-parser';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { Application } from 'express';
 import { createServer, Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
+import toobusy from 'node-toobusy';
 import path from 'path';
 import socketIo from 'socket.io';
-import compression from 'compression';
-import toobusy from 'node-toobusy';
-import cookieParser from 'cookie-parser';
+import Room from './models/room.model';
 
 export class Server {
   private readonly DEFAULT_PORT = 5000;
@@ -17,7 +18,7 @@ export class Server {
 
   private clients = {};
 
-  private rooms: { owner: string; name: string; socket: any }[] = [];
+  private rooms: Room[] = [];
 
   private USERS = [
     { id: 1, username: 'Admin' },
@@ -120,11 +121,11 @@ export class Server {
       if (foundRoom) {
         return res.sendStatus(400);
       } else {
-        this.rooms.push({ owner: body.username, name: body.room, socket: [] });
+        this.rooms.push(body);
 
         this.clients[body.room] = [];
 
-        console.log('Room created, with #', body.room);
+        console.log('Room created, with name: ', body.name);
 
         return res.send({});
       }
@@ -141,6 +142,11 @@ export class Server {
         delete this.clients[body.room];
 
         console.log('Room deleted, with #', body.room);
+
+        // AT ROOM DELETION THE USERS CURRENTLY IN THE ROOM ARE ALSO KICKED OUT
+        if (this.io) {
+          this.io.sockets.in(body.room).emit('sent-room-data', null);
+        }
 
         return res.send({});
       } else {
@@ -165,6 +171,13 @@ export class Server {
             this.clients[roomname] = [];
           }
 
+          if (!this.rooms.find((e) => e.name === roomname)) {
+            const newRoom = new Room();
+            newRoom.name = roomname;
+            newRoom.owner = username;
+            this.rooms.push(newRoom);
+          }
+
           if (this.clients[roomname].find((e) => e.clientId === username)) {
             socket.emit('already-connected', { text: 'You are already connected' });
 
@@ -187,6 +200,14 @@ export class Server {
           socket['roomname'] = roomname;
 
           console.log(username + ' - client connected');
+
+          const foundRoom = this.rooms.find((e) => e.name === socket['roomname']);
+
+          if (foundRoom) {
+            socket.emit('sent-room-data', foundRoom);
+          } else {
+            socket.emit('sent-room-data', null);
+          }
 
           socket.emit('currentSocket', newClient);
         }

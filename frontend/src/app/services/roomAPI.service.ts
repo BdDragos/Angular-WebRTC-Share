@@ -42,14 +42,12 @@ export class RoomAPIService {
     }
   }
 
-  addRoom(roomName: string) {
+  addRoom(room: Room) {
     this.loadingSpinnerService.show();
-    this.http
-      .post(environment.baseURL + '/api/createRoom', { username: localStorage.getItem('username'), room: roomName })
-      .subscribe(() => {
-        this.toastService.show({ text: 'Room was created', type: 'confirmation' });
-        this.getRooms();
-        this.loadingSpinnerService.close();
-      });
+
+    this.http.post(environment.baseURL + '/api/createRoom', room).subscribe(() => {
+      this.toastService.show({ text: 'Room was created', type: 'confirmation' });
+      this.loadingSpinnerService.close();
+    });
   }
 }
