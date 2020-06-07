@@ -159,9 +159,8 @@ export class Server {
     });
 
     this.app.post('/api/getRoom', (req, res) => {
-      console.log(req.body);
       const foundRoom = this.rooms.find((e) => e.name === req.body.roomname);
-      console.log(foundRoom);
+
       if (foundRoom) {
         res.send(foundRoom);
       } else {

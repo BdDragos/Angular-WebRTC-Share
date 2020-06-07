@@ -8,36 +8,43 @@
       </div>
     </div>
 
-    <table class="table table-dark table-striped m-top-2">
-      <thead>
-        <tr class="text-center">
-          <th>In room</th>
-          <th>Audio</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let client of clients" class="text-center">
-          <td>{{ client.clientId }}</td>
-          <td>
-            <audio [id]="client.socketId">
-              <source />
-            </audio>
-            <div class="d-flex h-100">
-              <div
-                (click)="onOwnerMuteUser(client.socketId)"
-                *ngIf="checkIfActive(client.socketId)"
-                class="red-microphone-background svg-icon-class sidebar-icon not-inverted"
-              ></div>
-              <div
-                *ngIf="clientId && currentRoom && clientId === currentRoom.owner"
-                (click)="onOwnerKickUser(client.socketId)"
-                class="close-background svg-icon-class sidebar-icon not-inverted"
-              ></div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="h-76 m-top-3 overflow-auto">
+      <table class="table table-dark table-striped m-top-2">
+        <thead>
+          <tr class="text-center">
+            <th>In room</th>
+            <th>Audio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let client of clients" class="text-center">
+            <td>{{ client.clientId }}</td>
+            <td>
+              <audio [id]="client.socketId">
+                <source />
+              </audio>
+              <div class="d-flex h-100">
+                <div
+                  (click)="onOwnerMuteUser(client.socketId)"
+                  *ngIf="checkIfActive(client.socketId)"
+                  class="red-microphone-background svg-icon-class sidebar-icon not-inverted"
+                ></div>
+                <div
+                  *ngIf="clientId && currentRoom && clientId === currentRoom.owner"
+                  (click)="onOwnerKickUser(client.socketId)"
+                  class="close-background svg-icon-class sidebar-icon not-inverted"
+                ></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="m-top-3">
+      <p>Video grid size:</p>
+      <input class="w-100" type="range" min="1" max="6" value="2" (change)="makeColumns($event.target.value)" />
+    </div>
   </div>
 
   <div class="center-element h-100 p-l-1 ml-auto">

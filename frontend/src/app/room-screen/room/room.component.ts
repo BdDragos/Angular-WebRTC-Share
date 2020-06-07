@@ -1,5 +1,5 @@
 import { ProgressSpinnerService } from './../../utilities-components/progress-spinner/progress-spinner.service';
-import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CommunicationService } from 'src/app/services/communication.service';
@@ -14,7 +14,7 @@ import { ToastService } from './../../utilities-components/toast-message/toast-m
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.scss'],
 })
-export class RoomComponent implements OnInit, OnDestroy {
+export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   public browser = navigator as any;
   public subscriptionArray: Subscription[] = [];
   public serverStatus: boolean;
@@ -221,6 +221,11 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  ngAfterViewInit() {
+    this.makeColumns('2');
+    this.cdk.detectChanges();
   }
 
   configurePeerConnection(toId: string) {
@@ -623,5 +628,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.clientId && this.currentRoom && this.clientId === this.currentRoom.owner) {
       this.communicationService.kickUser(kickedUser, this.clientId);
     }
+  }
+
+  makeColumns(event: any) {
+    // const container = this.overlayImageContainer.nativeElement;
+    // container.style.setProperty('--grid-rows', rows);
+    // container.style.setProperty('--grid-cols', cols);
+
+    const containerBorder = this.cameraDivList.nativeElement;
+    containerBorder.style.setProperty('--grid-cols', event);
   }
 }

@@ -1,10 +1,19 @@
+:root {
+  --grid-cols: 2;
+}
+
 .card {
   background: linear-gradient(147deg, #000000 0%, #2c3e50 74%);
 }
 
 .table {
   overflow: auto;
-  height: calc(100% - 21%);
+  height: 100%;
+  margin: 0 !important;
+}
+
+.h-76 {
+  height: 76%;
 }
 
 .h-94 {
@@ -22,7 +31,7 @@
 
 .grid-system-videos {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
 }
 
 .m-b-3 {
