@@ -32,6 +32,24 @@
     />
     <label class="room-config-label" for="adminCase">Streams seen only by owner</label>
   </div>
+
+  <div class="d-flex">
+    <input
+      class="input-checkbox"
+      id="passwordCase"
+      type="checkbox"
+      [checked]="hasPassword"
+      (change)="hasPassword = !hasPassword"
+    />
+    <label class="room-config-label" for="passwordCase">Room has password protection</label>
+  </div>
+
+  <div *ngIf="hasPassword">
+    <div>
+      Password
+    </div>
+    <input class="m-top-1" type="password" [(ngModel)]="passwordInput" />
+  </div>
 </div>
 
 <div class="dialog-foot m-top-6 d-flex w-100">

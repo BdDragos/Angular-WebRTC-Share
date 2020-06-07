@@ -5,6 +5,8 @@ export class Room {
   name: string;
   videoQuality: VideoQuality;
   adminOnlyScreenSee: boolean;
+  hasPassword: boolean;
+  password: string;
 
   constructor() {}
 }

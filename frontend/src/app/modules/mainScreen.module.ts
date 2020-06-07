@@ -7,12 +7,14 @@ import { CommunicationService } from 'src/app/services/communication.service';
 import { MainTabComponent } from '../main-screen/main-tab/main-tab.component';
 import { RoomListComponent } from '../main-screen/room-list/room-list.component';
 import { RoomComponent } from '../room-screen/room/room.component';
+import { RoomPasswordGuard } from '../routes/guards/RoomPassword.guard';
 import { HttpErrorInterceptor } from '../routes/interceptors/HttpError.interceptor';
 import { MainScreenRouting } from '../routes/mainScreen.routing';
 import { RoomAPIService } from '../services/roomAPI.service';
 import { ConfigureRoomComponent } from './../main-screen/configure-room/configure-room.component';
 import { MainRoomScreenComponent } from './../main-screen/main-room-screen/main-room-screen.component';
 import { UserConfigComponent } from './../main-screen/user-config/user-config.component';
+import { RoomPasswordDialogComponent } from './../room-screen/room-password-dialog/room-password-dialog.component';
 
 @NgModule({
   imports: [MainScreenRouting, MatDialogModule, FormsModule, CommonModule],
@@ -23,7 +25,13 @@ import { UserConfigComponent } from './../main-screen/user-config/user-config.co
     ConfigureRoomComponent,
     RoomComponent,
     RoomListComponent,
+    RoomPasswordDialogComponent,
   ],
-  providers: [CommunicationService, RoomAPIService, { provide: HTTP_INTERCEPTORS, useClass: HttpErrorInterceptor, multi: true }],
+  providers: [
+    CommunicationService,
+    RoomAPIService,
+    RoomPasswordGuard,
+    { provide: HTTP_INTERCEPTORS, useClass: HttpErrorInterceptor, multi: true },
+  ],
 })
 export class MainScreenModule {}

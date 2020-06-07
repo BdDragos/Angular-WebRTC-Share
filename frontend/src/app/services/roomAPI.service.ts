@@ -1,11 +1,10 @@
-import { ToastService } from './../utilities-components/toast-message/toast-message.service';
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { Room } from 'src/models/room.model';
 import { ProgressSpinnerService } from '../utilities-components/progress-spinner/progress-spinner.service';
+import { ToastService } from './../utilities-components/toast-message/toast-message.service';
 
 @Injectable()
 export class RoomAPIService {
@@ -14,7 +13,8 @@ export class RoomAPIService {
   constructor(
     private http: HttpClient,
     private loadingSpinnerService: ProgressSpinnerService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private tooltipService: ToastService
   ) {}
 
   getRoomSubject() {
@@ -26,6 +26,37 @@ export class RoomAPIService {
     this.http.get(environment.baseURL + '/api/getRooms').subscribe((response: any) => {
       this.roomSubject.next(response);
       this.loadingSpinnerService.close();
+    });
+  }
+
+  getRoom(roomname: string) {
+    return new Promise((resolve) => {
+      this.loadingSpinnerService.show();
+      this.http.post(environment.baseURL + '/api/getRoom', { roomname }).subscribe((response: any) => {
+        this.loadingSpinnerService.close();
+        if (response) {
+          if (response.hasPassword) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } else {
+          this.tooltipService.show({ text: 'No room found, creating now', type: 'info' });
+          resolve(false);
+        }
+      });
+    });
+  }
+
+  checkRoomPassword(password: string, roomname: string) {
+    return new Promise((resolve) => {
+      this.http.post(environment.baseURL + '/api/checkPassword', { password, roomname }).subscribe((response) => {
+        if (response) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
     });
   }
 
@@ -45,9 +76,13 @@ export class RoomAPIService {
   addRoom(room: Room) {
     this.loadingSpinnerService.show();
 
-    this.http.post(environment.baseURL + '/api/createRoom', room).subscribe(() => {
-      this.toastService.show({ text: 'Room was created', type: 'confirmation' });
+    this.http.post(environment.baseURL + '/api/createRoom', room).subscribe((response) => {
       this.loadingSpinnerService.close();
+      if (response) {
+        this.toastService.show({ text: 'Room was created', type: 'confirmation' });
+      } else {
+        this.toastService.show({ text: 'A room with this name already exists', type: 'error' });
+      }
     });
   }
 }

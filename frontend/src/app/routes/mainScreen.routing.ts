@@ -1,7 +1,8 @@
-import { RoomComponent } from './../room-screen/room/room.component';
 import { ModuleWithProviders } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { MainRoomScreenComponent } from '../main-screen/main-room-screen/main-room-screen.component';
+import { RoomComponent } from './../room-screen/room/room.component';
+import { RoomPasswordGuard } from './guards/RoomPassword.guard';
 
 const routes: Routes = [
   {
@@ -11,6 +12,7 @@ const routes: Routes = [
   {
     path: 'privateRoom/:roomname',
     component: RoomComponent,
+    canActivate: [RoomPasswordGuard],
   },
 ];
 

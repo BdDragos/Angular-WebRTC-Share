@@ -5,6 +5,8 @@ class Room {
   name: string;
   videoQuality: VideoQuality;
   adminOnlyScreenSee: boolean;
+  hasPassword: boolean;
+  password: string;
 
   constructor() {
     this.owner = '';
@@ -12,8 +14,10 @@ class Room {
     this.adminOnlyScreenSee = false;
     this.videoQuality = {
       name: 'VGA',
-      video: { minFrameRate: 30,  width: { exact: 640 }, height: { exact: 480 } }
+      video: { minFrameRate: 30, width: { exact: 640 }, height: { exact: 480 } }
     };
+    this.hasPassword = false;
+    this.password = '';
   }
 }
 

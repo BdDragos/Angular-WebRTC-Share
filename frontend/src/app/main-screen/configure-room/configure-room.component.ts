@@ -3,6 +3,7 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { Room } from 'src/models/room.model';
 import { VideoQuality } from 'src/models/videoQuality.model';
 import { RoomAPIService } from './../../services/roomAPI.service';
+import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
 
 @Component({
   selector: 'app-configure-room',
@@ -12,6 +13,8 @@ import { RoomAPIService } from './../../services/roomAPI.service';
 export class ConfigureRoomComponent implements OnInit {
   public roomName = '';
   public onlyOwnerCanSee = false;
+  public hasPassword = false;
+  public passwordInput = '';
 
   public videoOption: VideoQuality[] = [
     {
@@ -34,7 +37,11 @@ export class ConfigureRoomComponent implements OnInit {
 
   public selectedVideoQuality = this.videoOption[1];
 
-  constructor(private roomAPIService: RoomAPIService, private dialogRef: MatDialogRef<ConfigureRoomComponent>) {}
+  constructor(
+    private roomAPIService: RoomAPIService,
+    private dialogRef: MatDialogRef<ConfigureRoomComponent>,
+    private tooltipService: ToastService
+  ) {}
 
   ngOnInit() {}
 
@@ -43,14 +50,20 @@ export class ConfigureRoomComponent implements OnInit {
   }
 
   acceptAction() {
-    const newRoom: Room = {
-      owner: localStorage.getItem('username'),
-      name: this.roomName,
-      videoQuality: this.selectedVideoQuality,
-      adminOnlyScreenSee: this.onlyOwnerCanSee,
-    };
+    if (this.hasPassword && this.passwordInput.length < 3) {
+      this.tooltipService.show({ text: 'Password must have at least 3 characters', type: 'warning' });
+    } else {
+      const newRoom: Room = {
+        owner: localStorage.getItem('username'),
+        name: this.roomName,
+        videoQuality: this.selectedVideoQuality,
+        adminOnlyScreenSee: this.onlyOwnerCanSee,
+        hasPassword: this.hasPassword,
+        password: this.hasPassword ? this.passwordInput : '',
+      };
 
-    this.roomAPIService.addRoom(newRoom);
-    this.dialogRef.close();
+      this.roomAPIService.addRoom(newRoom);
+      this.dialogRef.close();
+    }
   }
 }

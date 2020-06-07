@@ -116,10 +116,10 @@ export class Server {
     this.app.post('/api/createRoom', (req, res) => {
       const body = req.body;
 
-      const foundRoom = this.rooms.find((e) => e.name === body.room);
+      const foundRoom = this.rooms.find((e) => e.name === body.name);
 
       if (foundRoom) {
-        return res.sendStatus(400);
+        return res.send(false);
       } else {
         this.rooms.push(body);
 
@@ -127,7 +127,7 @@ export class Server {
 
         console.log('Room created, with name: ', body.name);
 
-        return res.send({});
+        return res.send(true);
       }
     });
 
@@ -156,6 +156,35 @@ export class Server {
 
     this.app.get('/api/getRooms', (req, res) => {
       res.send(this.rooms);
+    });
+
+    this.app.post('/api/getRoom', (req, res) => {
+      console.log(req.body);
+      const foundRoom = this.rooms.find((e) => e.name === req.body.roomname);
+      console.log(foundRoom);
+      if (foundRoom) {
+        res.send(foundRoom);
+      } else {
+        res.send(null);
+      }
+    });
+
+    this.app.post('/api/checkPassword', (req, res) => {
+      const foundRoom = this.rooms.find((e) => e.name === req.body.roomname);
+
+      console.log(this.rooms);
+      console.log(req.body);
+      console.log(foundRoom);
+
+      if (foundRoom) {
+        if (foundRoom.password === req.body.password) {
+          res.send(true);
+        } else {
+          res.send(false);
+        }
+      } else {
+        res.send('');
+      }
     });
   }
 
