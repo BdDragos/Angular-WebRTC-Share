@@ -7,22 +7,6 @@
   height: calc(100% - 21%);
 }
 
-.w-30 {
-  width: 30%;
-}
-
-.w-20 {
-  width: 20%;
-}
-
-.w-25 {
-  width: 25%;
-}
-
-.w-60 {
-  width: 60%;
-}
-
 .h-94 {
   height: 94%;
 }
@@ -69,21 +53,37 @@
   background: url('../../../assets/svg/microphone.svg') no-repeat;
 }
 
+.close-background {
+  background: url('../../../assets/svg/red_x.svg') no-repeat;
+  background-size: contain;
+}
+
+.red-microphone-background {
+  background: url('../../../assets/svg/redmicrophone.svg') no-repeat;
+  background-size: contain;
+}
+
 .svg-icon-class {
   width: 15%;
   height: 100%;
-  filter: invert(1);
+  filter: invert(0.4);
+}
+
+.isActivated {
+  filter: invert(1) !important;
 }
 
 .h-5 {
   height: 5%;
 }
 
-.call-icon {
+.sidebar-icon {
   margin-left: auto;
   margin-right: auto;
   width: 25% !important;
   margin-top: 5%;
 }
 
-
+.not-inverted {
+  filter: invert(0) !important;
+}

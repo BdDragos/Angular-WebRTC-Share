@@ -181,8 +181,7 @@ export class Server {
           if (this.clients[roomname].find((e) => e.clientId === username)) {
             socket.emit('already-connected', { text: 'You are already connected' });
 
-            socket.leave(socket['roomname']);
-            socket.disconnect();
+            this.disconnectSocket(socket);
             return;
           }
 
@@ -221,8 +220,6 @@ export class Server {
       });
 
       socket.on('offer', (offer) => {
-        console.log('Offer arrived: ' + offer['to']);
-
         if (this.clients[socket['roomname']]) {
           this.clients[socket['roomname']].forEach((client) => {
             if (offer['to'] === client['socketId']) {
@@ -233,8 +230,6 @@ export class Server {
       });
 
       socket.on('answer', (answer) => {
-        console.log('Answer arrived: ' + answer['to']);
-
         if (this.clients[socket['roomname']]) {
           this.clients[socket['roomname']].forEach((client) => {
             if (answer['to'] === client['socketId']) {
@@ -245,8 +240,6 @@ export class Server {
       });
 
       socket.on('icecandidate', (candidate) => {
-        console.log('Icecandidate arrived: ' + candidate['to']);
-
         if (this.clients[socket['roomname']]) {
           this.clients[socket['roomname']].forEach((client) => {
             if (candidate['to'] === client['socketId']) {
@@ -257,24 +250,7 @@ export class Server {
       });
 
       socket.on('disconnect', () => {
-        if (this.clients[socket['roomname']]) {
-          this.clients[socket['roomname']].forEach((client) => {
-            if (client['socketId'] == socket.id) {
-              var socketIndex = this.clients[socket['roomname']].indexOf(client);
-              this.clients[socket['roomname']].splice(socketIndex, 1);
-              console.log(socket.id + ' - client disconnected');
-
-              socket.leave(socket['roomname']);
-
-              this.io.sockets.in(socket['roomname']).emit('clients', {
-                clients: this.clients[socket['roomname']],
-                socketIds: this.clients[socket['roomname']].map((e) => e.socketId)
-              });
-
-              this.io.sockets.in(socket['roomname']).emit('disconnected-client', { socketId: socket.id });
-            }
-          });
-        }
+        this.disconnectSocket(socket);
       });
 
       socket.on('post-new-message', (newMessage: any) => {
@@ -284,6 +260,41 @@ export class Server {
           });
         }
       });
+
+      socket.on('owner-mute-user', (recv: any) => {
+        if (this.clients[socket['roomname']]) {
+          socket.broadcast.to(recv.socketId).emit('owner-muted-you', recv.clientId);
+        }
+      });
+
+      socket.on('owner-kick-user', (recv: any) => {
+        if (this.clients[socket['roomname']]) {
+          socket.broadcast.to(recv.socketId).emit('owner-kicked-you', recv.clientId);
+        }
+      });
     });
+  }
+
+  disconnectSocket(socket) {
+    if (this.clients[socket['roomname']]) {
+      this.clients[socket['roomname']].forEach((client) => {
+        if (client['socketId'] == socket.id) {
+          var socketIndex = this.clients[socket['roomname']].indexOf(client);
+          this.clients[socket['roomname']].splice(socketIndex, 1);
+          console.log(socket.id + ' - client disconnected');
+
+          socket.leave(socket['roomname']);
+
+          socket.disconnect();
+
+          this.io.sockets.in(socket['roomname']).emit('clients', {
+            clients: this.clients[socket['roomname']],
+            socketIds: this.clients[socket['roomname']].map((e) => e.socketId)
+          });
+
+          this.io.sockets.in(socket['roomname']).emit('disconnected-client', { socketId: socket.id });
+        }
+      });
+    }
   }
 }

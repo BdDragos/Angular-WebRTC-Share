@@ -22,8 +22,18 @@
             <audio [id]="client.socketId">
               <source />
             </audio>
-
-            <div class="audio-background svg-icon-class call-icon"></div>
+            <div class="d-flex h-100">
+              <div
+                (click)="onOwnerMuteUser(client.socketId)"
+                *ngIf="checkIfActive(client.socketId)"
+                class="red-microphone-background svg-icon-class sidebar-icon not-inverted"
+              ></div>
+              <div
+                *ngIf="clientId && currentRoom && clientId === currentRoom.owner"
+                (click)="onOwnerKickUser(client.socketId)"
+                class="close-background svg-icon-class sidebar-icon not-inverted"
+              ></div>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -47,9 +57,17 @@
   <div class="right-side-chat h-100 p-l-1 ml-auto">
     <div class="top-buttons h-5 w-100">
       <div class="row d-flex h-100">
-        <div class="video-background svg-icon-class" (click)="enableVideo()"></div>
-        <div class="ml-auto screen-background svg-icon-class" (click)="enableScreen()"></div>
-        <div class="ml-auto audio-background svg-icon-class" (click)="enableAudio()"></div>
+        <div class="video-background svg-icon-class" (click)="enableVideo()" [class.isActivated]="localVideoIsPlaying"></div>
+        <div
+          class="ml-auto screen-background svg-icon-class"
+          (click)="enableScreen()"
+          [class.isActivated]="localScreenIsShared"
+        ></div>
+        <div
+          class="ml-auto audio-background svg-icon-class"
+          (click)="enableAudio()"
+          [class.isActivated]="localAudioIsPlaying"
+        ></div>
       </div>
     </div>
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import * as io from 'socket.io-client';
 import { Message } from 'src/models/message.model';
@@ -9,7 +10,7 @@ export class CommunicationService {
   private socket: SocketIOClient.Socket;
   public connectedusers: any;
 
-  constructor() {}
+  constructor(private router: Router) {}
 
   public onInit(username, roomname) {
     this.socket = io(this.url, { transports: ['websocket'], upgrade: false });
@@ -20,10 +21,12 @@ export class CommunicationService {
 
     this.socket.on('connect_timeout', (timeout: any) => {
       console.log('Connection Timeout with : ', timeout);
+      this.router.navigate(['/main']);
     });
 
     this.socket.on('connect_error', (error: any) => {
       console.log('Connection Error : ', error);
+      this.router.navigate(['/main']);
     });
 
     this.socket.on('disconnect', (reason: any) => {
@@ -129,6 +132,30 @@ export class CommunicationService {
   public getRoomData = () => {
     return Observable.create((observer: any) => {
       this.socket.on('sent-room-data', (response: any) => {
+        observer.next(response);
+      });
+    });
+  };
+
+  public muteUser = (socketId: string, clientId: string) => {
+    this.socket.emit('owner-mute-user', { socketId, clientId });
+  };
+
+  public kickUser = (socketId: string, clientId: string) => {
+    this.socket.emit('owner-kick-user', { socketId, clientId });
+  };
+
+  public onOwnerMuteReceived = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('owner-muted-you', (response: any) => {
+        observer.next(response);
+      });
+    });
+  };
+
+  public onOwnerKickReceived = () => {
+    return Observable.create((observer: any) => {
+      this.socket.on('owner-kicked-you', (response: any) => {
         observer.next(response);
       });
     });

@@ -1,4 +1,4 @@
-<div #toastBox class="main-toast-div">
+<div #toastBox class="main-toast-div w-100">
   <div class="toast-text-container">
     <div class="toast-text">
       {{ data.text }}
@@ -9,7 +9,7 @@
     <div class="toast-close-icon icon-general icon-cancel" (click)="closeToast()"></div>
   </div>
 
-  <svg height="54">
-    <polygon [attr.fill]="color" points="0,0 410,0 410,54 45,54" style="stroke: white; stroke-width: 1;" />
+  <svg class="w-100" height="54">
+    <polygon [attr.fill]="color" points="0,0 420,0 420,54 45,54" style="stroke: white; stroke-width: 1;" />
   </svg>
 </div>
