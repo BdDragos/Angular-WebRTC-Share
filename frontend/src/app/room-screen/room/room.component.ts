@@ -131,6 +131,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.peerConnection[response.socketId].close();
                 delete this.peerConnection[response.socketId];
                 this.removeRemoteVideoStream(response.socketId);
+                this.removeRemoteAudioStream(toId);
               }
             })
           );

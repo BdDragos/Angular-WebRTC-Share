@@ -23,6 +23,7 @@ export class Server {
   private USERS = [
     { id: 1, username: 'Admin' },
     { id: 2, username: 'Dragos' },
+    { id: 5, username: 'Andrei' },
     { id: 3, username: 'User_2' },
     { id: 4, username: 'User_3' }
   ];
