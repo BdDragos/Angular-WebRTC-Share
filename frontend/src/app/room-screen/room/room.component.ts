@@ -132,6 +132,8 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
                 delete this.peerConnection[response.socketId];
                 this.removeRemoteVideoStream(response.socketId);
                 this.removeRemoteAudioStream(response.socketId);
+                delete this.audioSender[response.socketId];
+                delete this.videoSender[response.socketId];
               }
             })
           );
@@ -276,6 +278,8 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     if ((this.localVideoIsPlaying || this.localScreenIsShared) && this.videoStream) {
+      // this.enableChoosenFormat(this.videoSender, this.videoStream);
+
       this.videoStream.getTracks().forEach((track: any) => {
         this.peerConnection[toId].addTrack(track, this.videoStream);
       });
@@ -465,13 +469,17 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  enableChoosenFormat(senderType: RTCRtpSender[], stream: any) {
+  enableChoosenFormat(senderType: RTCRtpSender[], stream: any, specificConnection?: string) {
     if (this.currentRoom.adminOnlyScreenSee && this.currentRoom && this.clientId) {
       // if you are owner you stream to everyone
       if (this.clientId === this.currentRoom.owner) {
         stream.getTracks().forEach((track: any) => {
-          for (const [key, value] of Object.entries(this.peerConnection)) {
-            senderType[key] = value.addTrack(track, stream);
+          if (specificConnection) {
+            senderType[specificConnection] = this.peerConnection[specificConnection].addTrack(track, stream);
+          } else {
+            for (const [key, value] of Object.entries(this.peerConnection)) {
+              senderType[key] = value.addTrack(track, stream);
+            }
           }
         });
       } else {
@@ -487,8 +495,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     } else {
       // if adminOnly flag isn't set you stream to everyone, normal behaviour
       stream.getTracks().forEach((track: any) => {
-        for (const [key, value] of Object.entries(this.peerConnection)) {
-          senderType[key] = value.addTrack(track, stream);
+        if (specificConnection) {
+          senderType[specificConnection] = this.peerConnection[specificConnection].addTrack(track, stream);
+        } else {
+          for (const [key, value] of Object.entries(this.peerConnection)) {
+            senderType[key] = value.addTrack(track, stream);
+          }
         }
       });
     }

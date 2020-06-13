@@ -13,8 +13,8 @@ class Room {
     this.name = '';
     this.adminOnlyScreenSee = false;
     this.videoQuality = {
-      name: 'VGA',
-      video: { minFrameRate: 30, width: { exact: 640 }, height: { exact: 480 } }
+      name: 'HD',
+      video: { minFrameRate: 30, width: { exact: 1280 }, height: { exact: 720 } }
     };
     this.hasPassword = false;
     this.password = '';

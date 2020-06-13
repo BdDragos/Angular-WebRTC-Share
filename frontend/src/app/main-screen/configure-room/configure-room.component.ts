@@ -35,7 +35,7 @@ export class ConfigureRoomComponent implements OnInit {
     },
   ];
 
-  public selectedVideoQuality = this.videoOption[1];
+  public selectedVideoQuality = this.videoOption[2];
 
   constructor(
     private roomAPIService: RoomAPIService,
