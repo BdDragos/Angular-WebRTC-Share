@@ -43,9 +43,11 @@ export class CommunicationService {
   }
 
   public disconnect() {
-    this.socket.emit('disconnect');
-    this.socket.disconnect();
-    this.socket = null;
+    if (this.socket) {
+      this.socket.emit('disconnect');
+      this.socket.disconnect();
+      this.socket = null;
+    }
   }
 
   public getSocketId = () => {

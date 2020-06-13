@@ -5,10 +5,12 @@
   <p class="m-l-5 pointer-cursor" (click)="close()">&#10006;</p>
 </div>
 
-<div class="dialog-main-container">
-  <div class="d-flex" *ngFor="let element of roomList">
-    <div (click)="selectedARoom(element)" class="pointer-cursor m-top-1">{{ element.name }}</div>
-    <p (click)="deleteRoom(element)" class="m-l-5" *ngIf="element.owner === currentUser">&#10006;</p>
+<div class="dialog-main-container h-100">
+  <div class="div-room-container">
+    <div class="d-flex m-top-4" *ngFor="let element of roomList">
+      <div (click)="selectedARoom(element)" class="pointer-cursor">{{ element.name }}</div>
+      <p (click)="deleteRoom(element)" class="m-l-5" *ngIf="element.owner === currentUser">&#10006;</p>
+    </div>
   </div>
 </div>
 

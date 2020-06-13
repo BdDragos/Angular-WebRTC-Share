@@ -27,7 +27,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   public message: any;
   public messagesList: Message[] = [];
 
-  public videoTrack: VideoTrack;
+  public videoTrack: any;
   public video: HTMLVideoElement;
 
   public localVideoIsPlaying = false;
@@ -60,11 +60,16 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loggedUserName = localStorage.getItem('username');
     if (!this.loggedUserName) {
       this.router.navigate(['/main']);
+      this.tooltipService.show({ text: 'No logged in user found.', type: 'error' });
     }
   }
 
   ngOnDestroy() {
     this.subscriptionArray.forEach((e) => e.unsubscribe());
+
+    this.stopChoosenStream(this.audioStream, this.audioSender);
+    this.stopChoosenStream(this.videoStream, this.videoStream);
+
     this.communicationService.disconnect();
   }
 
@@ -132,6 +137,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
                 delete this.peerConnection[response.socketId];
                 this.removeRemoteVideoStream(response.socketId);
                 this.removeRemoteAudioStream(response.socketId);
+                console.log('DISCONNECT');
                 delete this.audioSender[response.socketId];
                 delete this.videoSender[response.socketId];
               }
@@ -149,18 +155,18 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
           this.subscriptionArray.push(
             this.communicationService.getClients().subscribe((response: { clients: Client[]; socketIds: string[] }) => {
-              response.socketIds.forEach((e) => {
-                if (!this.peerConnection[e]) {
-                  this.configurePeerConnection(e);
-                }
-              });
-
               response.clients.splice(
                 response.clients.findIndex((e) => e.clientId === this.clientId),
                 1
               );
 
               this.clients = response.clients;
+
+              response.socketIds.forEach((e) => {
+                if (!this.peerConnection[e]) {
+                  this.configurePeerConnection(e);
+                }
+              });
             })
           );
 
@@ -278,11 +284,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     if ((this.localVideoIsPlaying || this.localScreenIsShared) && this.videoStream) {
-      // this.enableChoosenFormat(this.videoSender, this.videoStream);
-
-      this.videoStream.getTracks().forEach((track: any) => {
-        this.peerConnection[toId].addTrack(track, this.videoStream);
-      });
+      this.enableChoosenFormat(this.videoSender, this.videoStream, toId);
     }
   }
 
@@ -486,9 +488,19 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
         // if you aren't the owner you stream only to owner
         const foundElement = this.clients.find((e) => e.clientId === this.currentRoom.owner);
         // owner is online
-        if (foundElement && this.peerConnection[foundElement.socketId]) {
+        if (foundElement && this.peerConnection[foundElement.socketId] && !specificConnection) {
           stream.getTracks().forEach((track: any) => {
             senderType[foundElement.socketId] = this.peerConnection[foundElement.socketId].addTrack(track, stream);
+          });
+          // if owner joined and it wasn't here before you stream to him
+        } else if (
+          foundElement &&
+          this.peerConnection[foundElement.socketId] &&
+          specificConnection &&
+          specificConnection === foundElement.socketId
+        ) {
+          stream.getTracks().forEach((track: any) => {
+            senderType[specificConnection] = this.peerConnection[specificConnection].addTrack(track, stream);
           });
         }
       }
@@ -576,23 +588,16 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
     setTimeout(() => {
       try {
+        video.load();
         video.srcObject = event;
       } catch (err) {
+        video.load();
         video.src = window.URL.createObjectURL(event);
       }
 
-      const promise = video.play();
-
-      if (promise) {
-        promise
-          .then(() => {
-            cameraListDiv.appendChild(parentDiv);
-            console.log('Video was played');
-          })
-          .catch(() => {
-            console.log('Video could not be played');
-          });
-      }
+      video.play();
+      cameraListDiv.appendChild(parentDiv);
+      console.log('Video was played');
     });
   }
 
@@ -644,10 +649,6 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   makeColumns(event: any) {
-    // const container = this.overlayImageContainer.nativeElement;
-    // container.style.setProperty('--grid-rows', rows);
-    // container.style.setProperty('--grid-cols', cols);
-
     const containerBorder = this.cameraDivList.nativeElement;
     containerBorder.style.setProperty('--grid-cols', event);
   }

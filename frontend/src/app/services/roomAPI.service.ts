@@ -50,7 +50,9 @@ export class RoomAPIService {
 
   checkRoomPassword(password: string, roomname: string) {
     return new Promise((resolve) => {
+      this.loadingSpinnerService.show();
       this.http.post(environment.baseURL + '/api/checkPassword', { password, roomname }).subscribe((response) => {
+        this.loadingSpinnerService.close();
         if (response) {
           resolve(true);
         } else {
@@ -66,16 +68,15 @@ export class RoomAPIService {
       this.http
         .post(environment.baseURL + '/api/deleteRoom', { username: localStorage.getItem('username'), room: room.name })
         .subscribe(() => {
+          this.loadingSpinnerService.close();
           this.toastService.show({ text: 'Room was deleted', type: 'confirmation' });
           this.getRooms();
-          this.loadingSpinnerService.close();
         });
     }
   }
 
   addRoom(room: Room) {
     this.loadingSpinnerService.show();
-
     this.http.post(environment.baseURL + '/api/createRoom', room).subscribe((response) => {
       this.loadingSpinnerService.close();
       if (response) {

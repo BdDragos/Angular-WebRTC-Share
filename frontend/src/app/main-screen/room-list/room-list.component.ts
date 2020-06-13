@@ -1,8 +1,8 @@
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { MatDialogRef } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RoomAPIService } from 'src/app/services/roomAPI.service';
-import { MatDialogRef } from '@angular/material/dialog';
 import { Room } from 'src/models/room.model';
 
 @Component({
