@@ -76,9 +76,11 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.subscriptionArray.forEach((e) => e.unsubscribe());
 
-    this.stopChoosenStream(this.audioStream, this.audioSender);
-    this.stopChoosenStream(this.videoStreamScreen, this.videoSenderScreen);
-    this.stopChoosenStream(this.videoSenderVideo, this.videoSenderVideo);
+    this.disconnect();
+
+    this.peerConnection.forEach((e) => {
+      e.close();
+    });
 
     this.communicationService.disconnect();
   }

@@ -50,8 +50,10 @@ export class ConfigureRoomComponent implements OnInit {
   }
 
   acceptAction() {
-    if (this.hasPassword && this.passwordInput.length < 3) {
-      this.tooltipService.show({ text: 'Password must have at least 3 characters', type: 'warning' });
+    if (this.roomName.length < 2) {
+      this.tooltipService.show({ text: 'Room name must have at least 2 characters', type: 'warning' });
+    } else if (this.hasPassword && this.passwordInput.length < 4) {
+      this.tooltipService.show({ text: 'Password must have at least 4 characters', type: 'warning' });
     } else {
       const newRoom: Room = {
         owner: localStorage.getItem('username'),

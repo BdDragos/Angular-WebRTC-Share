@@ -68,7 +68,9 @@ export class CommunicationService {
   };
 
   public sendOffer = (offer: any) => {
-    this.socket.emit('offer', offer);
+    if (this.socket) {
+      this.socket.emit('offer', offer);
+    }
   };
 
   public receiveOffer = () => {
