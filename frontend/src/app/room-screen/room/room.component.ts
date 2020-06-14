@@ -1,5 +1,4 @@
-import { ProgressSpinnerService } from './../../utilities-components/progress-spinner/progress-spinner.service';
-import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CommunicationService } from 'src/app/services/communication.service';
@@ -7,7 +6,9 @@ import { Client } from 'src/models/client.model';
 import { Message } from 'src/models/message.model';
 import { Room } from 'src/models/room.model';
 import 'webrtc-adapter';
+import { ProgressSpinnerService } from './../../utilities-components/progress-spinner/progress-spinner.service';
 import { ToastService } from './../../utilities-components/toast-message/toast-message.service';
+import adapter from 'webrtc-adapter';
 
 @Component({
   selector: 'app-room',
@@ -34,18 +35,24 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   public localScreenIsShared = false;
   public localAudioIsPlaying = false;
 
-  public videoSender: RTCRtpSender[] = [];
+  public videoSenderVideo: RTCRtpSender[] = [];
+  public videoSenderScreen: RTCRtpSender[] = [];
   public audioSender: RTCRtpSender[] = [];
 
   public audioStream: any;
-  public videoStream: any;
+
+  public videoStreamVideo: any;
+  public videoStreamScreen: any;
 
   public audioIsActive: any = [];
+
+  public uniqueVideoIdentifier: Map<string, string[]> = new Map<string, string[]>();
 
   public currentRoom = new Room();
   private loggedUserName = '';
 
-  @ViewChild('videoElement', { static: false }) videoElement: ElementRef;
+  @ViewChild('videoElementVideo', { static: false }) videoElementVideo: ElementRef;
+  @ViewChild('videoElementScreen', { static: false }) videoElementScreen: ElementRef;
   @ViewChild('cameraDivList', { static: false }) cameraDivList: ElementRef;
   @ViewChild('messageBox', { static: false }) messageBox: ElementRef;
 
@@ -62,14 +69,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
       this.router.navigate(['/main']);
       this.tooltipService.show({ text: 'No logged in user found.', type: 'error' });
     }
+
+    console.log(adapter.browserDetails.browser);
   }
 
   ngOnDestroy() {
     this.subscriptionArray.forEach((e) => e.unsubscribe());
-
-    this.stopChoosenStream(this.audioStream, this.audioSender);
-    this.stopChoosenStream(this.videoStream, this.videoStream);
-
     this.communicationService.disconnect();
   }
 
@@ -135,11 +140,20 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
               if (this.peerConnection[response.socketId]) {
                 this.peerConnection[response.socketId].close();
                 delete this.peerConnection[response.socketId];
-                this.removeRemoteVideoStream(response.socketId);
+
+                if (this.uniqueVideoIdentifier.get(response.socketId)) {
+                  this.uniqueVideoIdentifier.get(response.socketId).forEach((e) => {
+                    this.removeRemoteVideoStream(e);
+                  });
+                }
+
+                this.uniqueVideoIdentifier.delete(response.socketId);
+
                 this.removeRemoteAudioStream(response.socketId);
-                console.log('DISCONNECT');
                 delete this.audioSender[response.socketId];
-                delete this.videoSender[response.socketId];
+
+                delete this.videoSenderVideo[response.socketId];
+                delete this.videoSenderScreen[response.socketId];
               }
             })
           );
@@ -245,25 +259,38 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     this.peerConnection[toId].ontrack = (event: any) => {
       console.log('Track Received: ' + event.track.kind);
 
+      if (this.uniqueVideoIdentifier.get(toId) == null) {
+        this.uniqueVideoIdentifier.set(toId, []);
+      }
+
+      this.uniqueVideoIdentifier.get(toId).push(event.track.id);
+
       event.streams[0].onremovetrack = (removeEvent: any) => {
         console.log('Track remove request');
-        console.log(removeEvent);
-
         if (event.track.kind === 'video') {
-          this.removeRemoteVideoStream(toId);
+          this.removeRemoteVideoStream(event.track.id);
         } else if (event.track.kind === 'audio') {
           this.removeRemoteAudioStream(toId);
         }
+
+        this.uniqueVideoIdentifier.get(toId).splice(
+          this.uniqueVideoIdentifier[toId].findIndex((e) => e === event.track.id),
+          1
+        );
       };
 
       if (event.track.kind === 'video') {
-        this.gotRemoteVideoStream(event.streams[0], toId);
+        this.gotRemoteVideoStream(event.streams[0], toId, event.track.id);
       } else if (event.track.kind === 'audio') {
         this.gotRemoteAudioStream(event.streams[0], toId);
       }
     };
 
     this.peerConnection[toId].onicegatheringstatechange = async () => {
+      if (this.peerConnection[toId].iceConnectionState === 'failed') {
+        this.peerConnection[toId].restartIce();
+      }
+
       if (this.peerConnection[toId].iceGatheringState === 'complete') {
         console.log('ICE COMPLETED');
       }
@@ -283,8 +310,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
       this.connect(toId);
     };
 
-    if ((this.localVideoIsPlaying || this.localScreenIsShared) && this.videoStream) {
-      this.enableChoosenFormat(this.videoSender, this.videoStream, toId);
+    if (this.localVideoIsPlaying && this.videoStreamVideo) {
+      this.enableChoosenFormat(this.videoSenderVideo, this.videoStreamVideo, toId);
+    }
+
+    if (this.localScreenIsShared && this.videoStreamScreen) {
+      this.enableChoosenFormat(this.videoSenderScreen, this.videoStreamScreen, toId);
     }
   }
 
@@ -381,8 +412,8 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.stopVideo();
 
-    if (this.videoElement) {
-      this.video = this.videoElement.nativeElement;
+    if (this.videoElementVideo) {
+      this.video = this.videoElementVideo.nativeElement;
       const constraints = { video: this.currentRoom.videoQuality.video };
       this.browser.mediaDevices
         .getUserMedia(constraints)
@@ -395,7 +426,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
               });
             };
           }
-          this.videoStream = stream;
+          this.videoStreamVideo = stream;
           this.videoTrack = stream.getVideoTracks();
 
           if (this.videoTrack) {
@@ -403,12 +434,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
           }
 
           try {
-            this.video.srcObject = this.videoStream;
+            this.video.srcObject = this.videoStreamVideo;
           } catch (err) {
-            this.video.src = window.URL.createObjectURL(this.videoStream);
+            this.video.src = window.URL.createObjectURL(this.videoStreamVideo);
           }
 
-          this.enableChoosenFormat(this.videoSender, stream);
+          this.enableChoosenFormat(this.videoSenderVideo, stream);
 
           this.video.muted = true;
           this.video.play();
@@ -424,51 +455,53 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   public enableScreen() {
     this.loadingSpinnerService.show();
     if (this.localScreenIsShared) {
-      this.stopVideo();
+      this.stopScreen();
       this.loadingSpinnerService.close();
       return;
     }
 
-    this.stopVideo();
+    this.stopScreen();
 
-    this.video = this.videoElement.nativeElement;
-    this.getAllUserMediaScreen()
-      .then((stream: any) => {
-        this.localScreenIsShared = true;
-        if (!stream.stop && stream.getTracks) {
-          stream.stop = function () {
-            this.getTracks().forEach((track: any) => {
-              track.stop();
-            });
+    if (this.videoElementScreen) {
+      this.video = this.videoElementScreen.nativeElement;
+      this.getAllUserMediaScreen()
+        .then((stream: any) => {
+          this.localScreenIsShared = true;
+          if (!stream.stop && stream.getTracks) {
+            stream.stop = function () {
+              this.getTracks().forEach((track: any) => {
+                track.stop();
+              });
+            };
+          }
+          this.videoStreamScreen = stream;
+
+          // listens to stop sharing button in chrome
+          this.videoStreamScreen.getVideoTracks()[0].onended = () => {
+            this.stopVideo();
           };
-        }
-        this.videoStream = stream;
 
-        // listens to stop sharing button in chrome
-        this.videoStream.getVideoTracks()[0].onended = () => {
-          this.stopVideo();
-        };
+          this.videoTrack = stream.getVideoTracks();
+          if (this.videoTrack) {
+            console.log('Using video device: ' + this.videoTrack[0].label);
+          }
 
-        this.videoTrack = stream.getVideoTracks();
-        if (this.videoTrack) {
-          console.log('Using video device: ' + this.videoTrack[0].label);
-        }
+          try {
+            this.video.srcObject = this.videoStreamScreen;
+          } catch (err) {
+            this.video.src = window.URL.createObjectURL(this.videoStreamScreen);
+          }
 
-        try {
-          this.video.srcObject = this.videoStream;
-        } catch (err) {
-          this.video.src = window.URL.createObjectURL(this.videoStream);
-        }
+          this.enableChoosenFormat(this.videoSenderScreen, stream);
 
-        this.enableChoosenFormat(this.videoSender, stream);
-
-        this.video.play();
-        this.loadingSpinnerService.close();
-      })
-      .catch((error) => {
-        this.tooltipService.show({ text: error, type: 'error' });
-        this.loadingSpinnerService.close();
-      });
+          this.video.play();
+          this.loadingSpinnerService.close();
+        })
+        .catch((error) => {
+          this.tooltipService.show({ text: error, type: 'error' });
+          this.loadingSpinnerService.close();
+        });
+    }
   }
 
   enableChoosenFormat(senderType: RTCRtpSender[], stream: any, specificConnection?: string) {
@@ -537,8 +570,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public stopVideo() {
-    this.stopChoosenStream(this.videoStream, this.videoSender);
+    this.stopChoosenStream(this.videoStreamVideo, this.videoSenderVideo);
     this.localVideoIsPlaying = false;
+  }
+
+  public stopScreen() {
+    this.stopChoosenStream(this.videoStreamScreen, this.videoSenderScreen);
     this.localScreenIsShared = false;
   }
 
@@ -549,11 +586,12 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
   public disconnect() {
     this.stopVideo();
+    this.stopScreen();
     this.stopAudio();
   }
 
-  gotRemoteVideoStream(event, id) {
-    this.removeRemoteVideoStream(id);
+  gotRemoteVideoStream(event, id, uniqueIdentifier: number) {
+    this.removeRemoteVideoStream(uniqueIdentifier);
 
     const cameraListDiv = this.cameraDivList.nativeElement;
 
@@ -566,14 +604,13 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (foundElement) {
       descriptionDiv.textContent = foundElement.clientId;
-      console.log('TEXT FOUND');
     }
 
     video.appendChild(sourceElement);
     parentDiv.appendChild(video);
     parentDiv.appendChild(descriptionDiv);
 
-    parentDiv.setAttribute('data-socket', id);
+    parentDiv.setAttribute('data-socket', uniqueIdentifier.toString());
     parentDiv.classList.add('w-100');
     parentDiv.classList.add('h-auto');
     parentDiv.classList.add('m-b-3');
@@ -619,8 +656,8 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  removeRemoteVideoStream(id) {
-    const videoParent = document.querySelector('[data-socket="' + id + '"]');
+  removeRemoteVideoStream(uniqueIdentifier) {
+    const videoParent = document.querySelector('[data-socket="' + uniqueIdentifier.toString() + '"]');
     if (videoParent) {
       this.cameraDivList.nativeElement.removeChild(videoParent);
     }

@@ -50,8 +50,16 @@
   <div class="center-element h-100 p-l-1 ml-auto">
     <div class="card w-100 h-100 overflow-auto">
       <div #cameraDivList class="card-body grid-system-videos">
-        <div [ngClass]="{ 'd-none': !localVideoIsPlaying && !localScreenIsShared }" class="w-100 h-auto m-b-3">
-          <video #videoElement muted class="video-class">
+        <div [ngClass]="{ 'd-none': !localVideoIsPlaying }" class="w-100 h-auto m-b-3">
+          <video #videoElementVideo muted class="video-class">
+            <source />
+          </video>
+
+          <div class="text-center m-top-2">{{ this.clientId }}</div>
+        </div>
+
+        <div [ngClass]="{ 'd-none': !localScreenIsShared }" class="w-100 h-auto m-b-3">
+          <video #videoElementScreen muted class="video-class">
             <source />
           </video>
 
