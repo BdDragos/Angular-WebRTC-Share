@@ -75,6 +75,11 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     this.subscriptionArray.forEach((e) => e.unsubscribe());
+
+    this.stopChoosenStream(this.audioStream, this.audioSender);
+    this.stopChoosenStream(this.videoStreamScreen, this.videoSenderScreen);
+    this.stopChoosenStream(this.videoSenderVideo, this.videoSenderVideo);
+
     this.communicationService.disconnect();
   }
 
@@ -266,17 +271,19 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
       this.uniqueVideoIdentifier.get(toId).push(event.track.id);
 
       event.streams[0].onremovetrack = (removeEvent: any) => {
-        console.log('Track remove request');
         if (event.track.kind === 'video') {
           this.removeRemoteVideoStream(event.track.id);
         } else if (event.track.kind === 'audio') {
           this.removeRemoteAudioStream(toId);
         }
 
-        this.uniqueVideoIdentifier.get(toId).splice(
-          this.uniqueVideoIdentifier[toId].findIndex((e) => e === event.track.id),
-          1
-        );
+        const val = this.uniqueVideoIdentifier.get(toId);
+        if (val) {
+          val.splice(
+            val.findIndex((e) => e === event.track.id),
+            1
+          );
+        }
       };
 
       if (event.track.kind === 'video') {
