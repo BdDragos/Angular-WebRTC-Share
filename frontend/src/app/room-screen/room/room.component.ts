@@ -487,7 +487,7 @@ export class RoomComponent implements OnInit, OnDestroy, AfterViewInit {
 
           // listens to stop sharing button in chrome
           this.videoStreamScreen.getVideoTracks()[0].onended = () => {
-            this.stopVideo();
+            this.stopScreen();
           };
 
           this.videoTrack = stream.getVideoTracks();
